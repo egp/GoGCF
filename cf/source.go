@@ -1,4 +1,4 @@
-// cf/source.go v2
+// cf/source.go v3
 package cf
 
 import (
@@ -64,6 +64,13 @@ func (g sourceBackedGCF) Next() (RCFTerm, GCF, error) {
 }
 
 func (g sourceBackedGCF) Range() Range {
+	switch src := g.src.(type) {
+	case int64Source:
+		if !src.emitted {
+			return exactInt64Range(src.value)
+		}
+	}
+
 	return Range{}
 }
 
@@ -75,4 +82,23 @@ func (g sourceBackedGCF) Convergent() (Rational, error) {
 	return Rational{}, ErrUndefined
 }
 
-// cf/source.go v2
+func exactInt64Range(v int64) Range {
+	r := Rational{
+		Num: big.NewInt(v),
+		Den: big.NewInt(1),
+	}
+
+	b := Bound{
+		Kind:   BoundFinite,
+		Value:  r,
+		Closed: true,
+	}
+
+	return Range{
+		Lo:      b,
+		Hi:      b,
+		Outside: false,
+	}
+}
+
+// cf/source.go v3

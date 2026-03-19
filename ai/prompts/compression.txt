@@ -1,0 +1,19 @@
+Context compression checkpoint.
+
+Summarize the current conversation into a compact state capsule (≤20 lines).
+
+Include only:
+- project description
+- current milestone
+- working components
+- known failures
+- next immediate task
+- constraints or invariants
+
+Remove:
+- obsolete reasoning
+- abandoned approaches
+- long explanations
+- debugging logs
+
+After producing the capsule, treat it as the authoritative context and consider all earlier discussion obsolete.
