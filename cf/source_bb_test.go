@@ -220,5 +220,99 @@ func TestBB_FromSource_Sqrt2_TakeThree_ConvergentIsSevenOverFive(t *testing.T) {
 		t.Fatalf("denominator = %s, want %s", got, want)
 	}
 }
+func TestBB_Rat64_SourceEmitsRCFTerms_1_2_2_ThenEOF(t *testing.T) {
+	src := cf.Rat64(7, 5)
+
+	want := []string{"1", "2", "2"}
+	cur := src
+	for i, w := range want {
+		term, rest, err := cur.NextPQ()
+		if err != nil {
+			t.Fatalf("NextPQ() #%d error: %v", i+1, err)
+		}
+		if !term.IsValue() {
+			t.Fatalf("term #%d should be a value", i+1)
+		}
+		if term.P == nil || term.Q == nil {
+			t.Fatalf("term #%d should have non-nil P and Q", i+1)
+		}
+		if got, wantP := term.P.String(), "1"; got != wantP {
+			t.Fatalf("term #%d P = %s, want %s", i+1, got, wantP)
+		}
+		if got := term.Q.String(); got != w {
+			t.Fatalf("term #%d Q = %s, want %s", i+1, got, w)
+		}
+		cur = rest
+	}
+
+	term4, _, err := cur.NextPQ()
+	if err != nil {
+		t.Fatalf("final NextPQ() error: %v", err)
+	}
+	if !term4.IsEOF() {
+		t.Fatalf("final term should be EOF")
+	}
+}
+
+func TestBB_FromSource_Rat64_FirstThreeNextsEmit_1_2_2(t *testing.T) {
+	g := cf.FromSource(cf.Rat64(7, 5))
+
+	want := []string{"1", "2", "2"}
+	cur := g
+	for i, w := range want {
+		term, rest, err := cur.Next()
+		if err != nil {
+			t.Fatalf("Next() #%d error: %v", i+1, err)
+		}
+		if !term.IsValue() {
+			t.Fatalf("term #%d should be a value", i+1)
+		}
+		value, ok := term.BigInt()
+		if !ok {
+			t.Fatalf("term #%d should expose a BigInt", i+1)
+		}
+		if got := value.String(); got != w {
+			t.Fatalf("term #%d = %s, want %s", i+1, got, w)
+		}
+		cur = rest
+	}
+
+	term4, _, err := cur.Next()
+	if err != nil {
+		t.Fatalf("final Next() error: %v", err)
+	}
+	if !term4.IsEOF() {
+		t.Fatalf("final emitted term should be EOF")
+	}
+}
+
+func TestBB_FromSource_Rat64_RangeIsExactPoint(t *testing.T) {
+	g := cf.FromSource(cf.Rat64(7, 5))
+
+	r := g.Range()
+
+	if !r.IsInside() {
+		t.Fatalf("Rat64 evaluator range should be inside")
+	}
+	if r.IsOutside() {
+		t.Fatalf("Rat64 evaluator range should not be outside")
+	}
+	if !r.IsExact() {
+		t.Fatalf("Rat64 evaluator range should be exact")
+	}
+
+	if got, want := r.Lo.Value.Num.String(), "7"; got != want {
+		t.Fatalf("lo numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Lo.Value.Den.String(), "5"; got != want {
+		t.Fatalf("lo denominator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Num.String(), "7"; got != want {
+		t.Fatalf("hi numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Den.String(), "5"; got != want {
+		t.Fatalf("hi denominator = %s, want %s", got, want)
+	}
+}
 
 // cf/source_bb_test.go v1

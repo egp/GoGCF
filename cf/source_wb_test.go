@@ -134,5 +134,65 @@ func TestWB_RCFPrefixGCF_ConvergentUsesRemainingTermsFromIndex(t *testing.T) {
 		t.Fatalf("denominator = %s, want %s", got, want)
 	}
 }
+func TestWB_Rat64Source_ConcreteStateStartsAtIndexZero(t *testing.T) {
+	src := Rat64(7, 5)
+
+	s0, ok := src.(rat64Source)
+	if !ok {
+		t.Fatalf("Rat64() concrete type = %T, want rat64Source", src)
+	}
+	if s0.index != 0 {
+		t.Fatalf("initial index = %d, want 0", s0.index)
+	}
+	if got, want := s0.num, int64(7); got != want {
+		t.Fatalf("stored num = %d, want %d", got, want)
+	}
+	if got, want := s0.den, int64(5); got != want {
+		t.Fatalf("stored den = %d, want %d", got, want)
+	}
+	if len(s0.terms) != 3 {
+		t.Fatalf("initial terms len = %d, want 3", len(s0.terms))
+	}
+	if got, want := s0.terms[0].String(), "1"; got != want {
+		t.Fatalf("terms[0] = %s, want %s", got, want)
+	}
+	if got, want := s0.terms[1].String(), "2"; got != want {
+		t.Fatalf("terms[1] = %s, want %s", got, want)
+	}
+	if got, want := s0.terms[2].String(), "2"; got != want {
+		t.Fatalf("terms[2] = %s, want %s", got, want)
+	}
+}
+
+func TestWB_Rat64Source_ConcreteRemainderAdvancesWithoutMutatingOriginal(t *testing.T) {
+	src := Rat64(7, 5)
+
+	s0, ok := src.(rat64Source)
+	if !ok {
+		t.Fatalf("Rat64() concrete type = %T, want rat64Source", src)
+	}
+
+	term1, rest1, err := s0.NextPQ()
+	if err != nil {
+		t.Fatalf("first NextPQ() error: %v", err)
+	}
+	if !term1.IsValue() {
+		t.Fatalf("first term should be a value")
+	}
+	if got, want := term1.Q.String(), "1"; got != want {
+		t.Fatalf("first term Q = %s, want %s", got, want)
+	}
+
+	s1, ok := rest1.(rat64Source)
+	if !ok {
+		t.Fatalf("remainder concrete type = %T, want rat64Source", rest1)
+	}
+	if s1.index != 1 {
+		t.Fatalf("remainder index = %d, want 1", s1.index)
+	}
+	if s0.index != 0 {
+		t.Fatalf("original source mutated: index = %d, want 0", s0.index)
+	}
+}
 
 // cf/source_wb_test.go v1

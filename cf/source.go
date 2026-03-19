@@ -1,4 +1,4 @@
-// cf/source.go v5
+// cf/source.go v7
 package cf
 
 import (
@@ -15,8 +15,24 @@ type int64Source struct {
 	emitted bool
 }
 
+type rat64Source struct {
+	terms []*big.Int
+	index int
+	num   int64
+	den   int64
+}
+
 func Int64(v int64) GCFSource {
 	return int64Source{value: v}
+}
+
+func Rat64(num, den int64) GCFSource {
+	return rat64Source{
+		terms: rcfTermsFromRat64(num, den),
+		index: 0,
+		num:   num,
+		den:   den,
+	}
 }
 
 func (s int64Source) NextPQ() (PQTerm, GCFSource, error) {
@@ -31,6 +47,25 @@ func (s int64Source) NextPQ() (PQTerm, GCFSource, error) {
 	}
 
 	return term, int64Source{value: s.value, emitted: true}, nil
+}
+
+func (s rat64Source) NextPQ() (PQTerm, GCFSource, error) {
+	if s.index >= len(s.terms) {
+		return PQTerm{Kind: PQEOF}, s, nil
+	}
+
+	term := PQTerm{
+		Kind: PQValue,
+		P:    big.NewInt(1),
+		Q:    new(big.Int).Set(s.terms[s.index]),
+	}
+
+	return term, rat64Source{
+		terms: s.terms,
+		index: s.index + 1,
+		num:   s.num,
+		den:   s.den,
+	}, nil
 }
 
 type sourceBackedGCF struct {
@@ -74,6 +109,10 @@ func (g sourceBackedGCF) Range() Range {
 	case int64Source:
 		if !src.emitted {
 			return exactInt64Range(src.value)
+		}
+	case rat64Source:
+		if src.index == 0 && src.den != 0 {
+			return exactRationalRange(src.num, src.den)
 		}
 	}
 
@@ -182,9 +221,20 @@ func (g rcfPrefixGCF) Convergent() (Rational, error) {
 }
 
 func exactInt64Range(v int64) Range {
+	return exactRationalRange(v, 1)
+}
+
+func exactRationalRange(num, den int64) Range {
+	n := big.NewInt(num)
+	d := big.NewInt(den)
+	if d.Sign() < 0 {
+		n.Neg(n)
+		d.Neg(d)
+	}
+
 	r := Rational{
-		Num: big.NewInt(v),
-		Den: big.NewInt(1),
+		Num: n,
+		Den: d,
 	}
 
 	b := Bound{
@@ -200,4 +250,41 @@ func exactInt64Range(v int64) Range {
 	}
 }
 
-// cf/source.go v5
+func rcfTermsFromRat64(num, den int64) []*big.Int {
+	if den == 0 {
+		return nil
+	}
+
+	n := num
+	d := den
+	if d < 0 {
+		n = -n
+		d = -d
+	}
+
+	terms := make([]*big.Int, 0, 8)
+	for d != 0 {
+		q := floorDivInt64(n, d)
+		terms = append(terms, big.NewInt(q))
+
+		r := n - q*d
+		if r == 0 {
+			break
+		}
+
+		n, d = d, r
+	}
+
+	return terms
+}
+
+func floorDivInt64(n, d int64) int64 {
+	q := n / d
+	r := n % d
+	if r != 0 && ((r > 0) != (d > 0)) {
+		q--
+	}
+	return q
+}
+
+// cf/source.go v7
