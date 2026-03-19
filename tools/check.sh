@@ -1,6 +1,5 @@
-# tools/check.zsh v1
 #!/usr/bin/env zsh
-# tools/check.zsh
+# tools/check.zsh v2
 
 set -euo pipefail
 
@@ -38,4 +37,4 @@ go test -count=1 -coverprofile=./tmp/cover.out ./cf
 ###################################
 
 print -P "%F{green}OK%f"
-# tools/check.zsh v1
+# tools/check.zsh v2

@@ -6,7 +6,7 @@ import (
 	"log"
 	"math/big"
 
-	"example.com/yourmodule/cf"
+	"github.com/egp/GoGCF/cf"
 )
 
 func main() {
