@@ -1,0 +1,22 @@
+# .gitignore v1
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries and coverage
+*.test
+*.out
+coverage.out
+
+# Dependency directories
+vendor/
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
+
+# .gitignore v1

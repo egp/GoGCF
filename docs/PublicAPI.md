@@ -1,11 +1,11 @@
-<!-- PublicAPI.md  v3 -->
+<!-- PublicAPI.md v4 -->
 # PublicAPI.md
 
-# Continued Fraction Arithmetic Library Public API Draft V3
+# Continued Fraction Arithmetic Library Public API Draft
 
 ## Status
 
-This document is the third draft of the public API for the continued-fraction arithmetic library.
+This document is the current public API draft for the continued-fraction arithmetic library.
 
 This version adopts the current design decisions:
 
@@ -13,10 +13,12 @@ This version adopts the current design decisions:
 - `GCFSource` is immutable
 - `GCF` is immutable
 - evaluation proceeds by returning a remainder object, not by mutating state
-- ingestion is GCF-oriented
-- emission is RCF-oriented
+- constructors produce `GCFSource`
+- arithmetic operates on `GCF`
 - emitted terms are tagged objects, not bare `BigInt`
-- division by exact zero may yield positive or negative infinity instead of an error
+- public `RCFTerm` currently exposes only value and EOF
+- `Range` stores `Outside` explicitly
+- `Take(n)` returns only the finite prefix and an error
 - cloning is not part of the public API
 - memoization, if needed later, is an internal optimization only
 
@@ -43,7 +45,7 @@ Proposed package name:
 5. External ingestion is GCF-oriented.
 6. External emission is RCF-oriented.
 7. All inputs are assumed infinite until exhausted.
-8. A finite GCF is a GCF whose underlying source has been exhausted.
+8. A finite GCF is a GCF whose source has been exhausted or whose finite prefix has been materialized.
 9. The public API should be as small as possible while still supporting the target formula.
 10. Performance is secondary to correctness, testability, and debuggability.
 
@@ -54,22 +56,13 @@ Proposed package name:
 This API distinguishes between:
 
 - `GCFSource`: immutable generalized-CF input source
-- `GCF`: immutable arithmetic evaluator/value that emits RCF terms
+- `GCF`: immutable arithmetic evaluator/value that emits `RCFTerm`
 
 These are related, but not identical.
 
 ### 3.1 GCFSource
 
-`GCFSource` is an immutable description of a generalized continued-fraction input stream.
-
-Examples:
-
-- exact integer source
-- exact rational source
-- named constant source such as `Pi()` or `E()`
-- procedural `(p,q)` source adapter
-
-A `GCFSource` does not expose arithmetic emission methods such as `Range()` or `Convergent()`.
+`GCFSource` is an immutable description and remainder-carrier for a generalized continued-fraction input stream.
 
 Proposed declaration:
 
@@ -81,21 +74,19 @@ Semantics:
 
 - `NextPQ()` returns one generalized input term and the remainder of the source
 - the remainder is another immutable `GCFSource`
-- `io.EOF` means the input source is exhausted
-- sources are assumed infinite until `io.EOF` is observed
+- ordinary source EOF is represented by `PQTerm`
+- `error` is reserved for exceptional source behavior
 
 ### 3.2 GCF
 
 `GCF` is an immutable arithmetic evaluator/value.
-
-A `GCF` may internally encode transform coefficients, range state, emitted-prefix state, and progress state, but none of that is mutated in place through the public API.
 
 Proposed declaration:
 
     type GCF interface {
         Next() (RCFTerm, GCF, error)
         Range() Range
-        Take(n int) (prefix GCF, rest GCF, err error)
+        Take(n int) (GCF, error)
         Convergent() (Rational, error)
     }
 
@@ -103,7 +94,7 @@ Semantics:
 
 - `Next()` returns one emitted output term and the remainder evaluator
 - `Range()` observes the current evaluator state
-- `Take(n)` returns a finite prefix evaluator and the remainder evaluator
+- `Take(n)` returns a finite prefix evaluator and an error
 - `Convergent()` is intended for finite evaluators
 
 ---
@@ -131,29 +122,44 @@ Required invariants:
 
 ## 5. Input Term Type
 
-### 5.1 PQTerm
+### 5.1 PQTermKind
+
+Proposed declaration:
+
+    type PQTermKind int
+
+    const (
+        PQValue PQTermKind = iota
+        PQEOF
+    )
+
+### 5.2 PQTerm
 
 `PQTerm` is the public generalized input-term type.
 
 Proposed declaration:
 
     type PQTerm struct {
-        P *big.Int
-        Q *big.Int
+        Kind PQTermKind
+        P    *big.Int
+        Q    *big.Int
     }
 
 Semantics:
 
-- `P` and `Q` are exact `BigInt` values
-- this is the ingestion format for generalized continued fractions
+- if `Kind == PQValue`, `P` and `Q` are meaningful
+- if `Kind == PQEOF`, `P` and `Q` are nil
 
-Input-source exhaustion is reported by `io.EOF`, not by a special `PQTerm` value.
+Required helper methods:
+
+    func (t PQTerm) IsValue() bool
+    func (t PQTerm) IsEOF() bool
 
 ---
 
 ## 6. Output Term Type
 
-Bare `BigInt` is not sufficient for emitted output because the output stream must also represent `EOF` and `±Inf`.
+Bare `BigInt` is not sufficient for emitted output because the output stream must also represent EOF.
 
 ### 6.1 RCFTermKind
 
@@ -162,10 +168,8 @@ Proposed declaration:
     type RCFTermKind int
 
     const (
-        TermRCF RCFTermKind = iota
-        TermEOF
-        TermPosInf
-        TermNegInf
+        RCFValue RCFTermKind = iota
+        RCFEOF
     )
 
 ### 6.2 RCFTerm
@@ -181,34 +185,29 @@ Proposed declaration:
 
 Semantics:
 
-- if `Kind == TermRCF`, `Value` must be non-nil and is the emitted RCF term
-- if `Kind != TermRCF`, `Value` must be nil
+- if `Kind == RCFValue`, `Value` must be non-nil and is the emitted RCF term
+- if `Kind == RCFEOF`, `Value` must be nil
 
 Required helper methods:
 
-    func (t RCFTerm) IsRCF() bool
+    func (t RCFTerm) IsValue() bool
     func (t RCFTerm) IsEOF() bool
-    func (t RCFTerm) IsPosInf() bool
-    func (t RCFTerm) IsNegInf() bool
     func (t RCFTerm) BigInt() (*big.Int, bool)
-
-`BigInt()` returns `(value, true)` only for `TermRCF`.
 
 ### 6.3 Error vs Term-Channel Split
 
-The output-term channel is used for ordinary arithmetic stream results:
+The term channel is intended for ordinary stream results:
 
-- emitted RCF term
+- emitted value term
 - EOF
-- positive infinity
-- negative infinity
 
 Go `error` values are reserved for exceptional conditions such as:
 
 - malformed source behavior
-- truly undefined operations such as `0/0`
 - invariant failures
 - implementation-detected stuck or non-progress states
+
+The public API intentionally does not yet expose non-finite emitted terms such as `+Inf` or `-Inf`.
 
 ---
 
@@ -259,11 +258,10 @@ Semantics:
 Proposed declaration:
 
     type Range struct {
-        Lo Bound
-        Hi Bound
+        Lo      Bound
+        Hi      Bound
+        Outside bool
     }
-
-This representation supports both inside and outside semantics.
 
 Required methods:
 
@@ -274,33 +272,27 @@ Required methods:
 
 Semantics:
 
-- `IsInside()` means the value lies inside the interval/set described by `Lo` and `Hi`
-- `IsOutside()` means the value lies outside the interval/set described by `Lo` and `Hi`
-- `IsExact()` means the value is known exactly
-
-Inside/outside is inferred from endpoint ordering together with open/closed endpoint semantics. It is not stored as a separate explicit flag.
+- `IsInside()` means `Outside == false`
+- `IsOutside()` means `Outside == true`
+- `IsExact()` means the represented set is a single exact value
 
 ### 7.4 Exactness
 
-A range is exact when it denotes a single exact value.
-
-Example:
-
-- `[x, x]` is exact
-- `(x, x)` is not exact
+A range is exact when it denotes a single exact value, for example `[x, x]`.
 
 ### 7.5 Range Comparison
 
 `Range.Cmp(other)` orders ranges by informativeness.
 
-The intended ordering remains:
+The intended ordering is:
 
-1. inside narrow
-2. inside wide
-3. outside wide
+1. exact
+2. inside narrow
+3. inside wide
 4. outside narrow
+5. outside wide
 
-The exact metric for “narrow” remains to be formalized.
+Among same-class ranges, narrower finite span is better than wider finite span.
 
 ---
 
@@ -334,6 +326,7 @@ Initially required:
 
     func Pi() GCFSource
     func E() GCFSource
+    func Sqrt2() GCFSource
 
 Each call returns a fresh immutable source.
 
@@ -383,23 +376,23 @@ Notes:
     func Mul(x, y GCF) GCF
     func Div(x, y GCF) GCF
 
-### 10.3 Division by Zero Semantics
+### 10.3 Comparison
 
-Division by exact zero is not automatically an error.
+    type Ordering int
 
-When mathematically certified, division by zero may yield:
+    const (
+        Less Ordering = -1
+        Equal Ordering = 0
+        Greater Ordering = 1
+    )
 
-- `TermPosInf`
-- `TermNegInf`
+    func Compare(x, y GCF) (Ordering, error)
 
-through ordinary `Next()` emission.
+Intended behavior:
 
-Examples:
-
-- positive finite numerator divided by exact zero may yield `+Inf`
-- negative finite numerator divided by exact zero may yield `-Inf`
-
-Truly undefined forms such as `0/0` remain errors.
+- ingest as needed until a certified comparison is available
+- leave `x` and `y` unchanged because they are immutable
+- return an error if evaluation becomes undefined or stuck
 
 ---
 
@@ -414,20 +407,18 @@ Behavior:
 - returns the next emitted output term
 - returns the remainder evaluator
 - ordinary waiting for more source information is handled internally and is not a public “blocked” condition
-- `TermEOF`, `TermPosInf`, and `TermNegInf` are returned in the term channel
+- `RCFEOF` is returned in the term channel
 - exceptional failures are returned through `error`
 
 ### 11.2 Take
 
-    func (z GCF) Take(n int) (prefix GCF, rest GCF, err error)
+    func (z GCF) Take(n int) (GCF, error)
 
 Behavior:
 
 - consumes up to `n` emitted RCF terms from `z`
-- returns:
-  - a finite RCF-backed prefix evaluator
-  - the remainder evaluator
-- if fewer than `n` terms are available because the source terminated, the prefix is still valid and `err == io.EOF`
+- returns a finite RCF-backed prefix evaluator
+- if fewer than `n` terms are available because the evaluator ended, the returned prefix is still valid and `err == io.EOF`
 - non-EOF errors indicate exceptional conditions
 
 This is the preferred way to materialize a finite prefix from an infinite evaluation.
@@ -440,7 +431,7 @@ Semantics:
 
 - `Convergent()` produces a `Rational` from a finite evaluator
 - it is intended especially for finite RCF-backed values such as those returned by `Take(n)`
-- calling `Convergent()` on a non-finite evaluator is an error unless a later design revision broadens the meaning
+- calling `Convergent()` on a non-finite evaluator is an error
 
 ### 11.4 Range
 
@@ -450,35 +441,20 @@ Every `GCF` must provide its current certified range.
 
 ---
 
-## 12. Comparison
+## 12. Identity Initializers for Internal Machinery
 
-Comparison remains required by the Requirements Spec.
+The public API does not need to expose ULFT and BLFT directly yet, but the design assumes internal identity initializers for evaluator construction.
 
-Current draft candidate:
+Required internal identities:
 
-    type Ordering int
+- ULFT identity: `(1,0)/(0,1)`
+- BLFT identity-style initializer: `(1,0,0,0)/(0,0,0,1)`
 
-    const (
-        Less Ordering = -1
-        Equal Ordering = 0
-        Greater Ordering = 1
-    )
-
-Candidate function:
-
-    func Compare(x, y GCF) (Ordering, error)
-
-Intended behavior:
-
-- ingest as needed until a certified comparison is available
-- leave `x` and `y` unchanged because they are immutable
-- return an error if evaluation becomes truly undefined or stuck
-
-Whether a bounded / timeout-aware comparison variant is needed remains open.
+These are part of the internal design contract.
 
 ---
 
-## 13. Errors
+## 13. Error Model
 
 The public API should define a small set of sentinel errors.
 
@@ -490,14 +466,12 @@ Proposed sentinel errors:
 Intended meanings:
 
 - `ErrUndefined`:
-  mathematically undefined operation, such as `0/0`
+  mathematically undefined or currently unsupported result under the initial public surface
 
 - `ErrStuck`:
   implementation detected non-progress or a strategy failure unlikely to advance without intervention
 
-Ordinary source exhaustion is not an error for `Next()`. It is represented as `TermEOF`.
-
-Ordinary division-by-zero-to-infinity is not an error when the sign is mathematically certified.
+Ordinary source or evaluator exhaustion is not an error for `Next()`. It is represented as EOF in the term object.
 
 ---
 
@@ -544,7 +518,7 @@ No cloning is required because all values are immutable.
 
 ## 15. Public API Exclusions for This Draft
 
-The following are not public in V3:
+The following are not public in this draft:
 
 - cloning
 - memoization controls
@@ -553,62 +527,77 @@ The following are not public in V3:
 - public transform-coefficient inspection
 - decimal or radix digit emission
 - public bounded rational-collapse unary operator
+- public non-finite emitted output terms
 - concurrency guarantees
 
 These may be added later if needed.
 
 ---
 
-## 16. Black-Box Test Expectations
+## 16. Test Conventions
 
-The public API should support black-box tests that verify:
+Recommended conventions for test organization:
 
-- exact source construction from integers and rationals
-- named constant source construction
-- lifting from `GCFSource` to `GCF`
-- expression-building for the target formula
-- tagged term emission through `Next()`
-- finite prefix extraction through `Take(n)`
-- convergent computation from finite prefixes
-- range behavior
-- target-formula emitted-prefix checks
-- comparison behavior
-- stuck / undefined behavior through public errors
-- infinity emission through ordinary term output
+### 16.1 Black-box tests
 
----
+- package `cf_test`
+- file suffix `*_bb_test.go`
+- test names prefixed `TestBB_`
 
-## 17. Likely Internal Types Not Exposed Publicly
+### 16.2 White-box tests
 
-The following are expected internally but are not part of the public API draft:
+- package `cf`
+- file suffix `*_wb_test.go`
+- test names prefixed `TestWB_`
 
-- `UnaryLFT`
-- `BinaryLFT`
-- `DiagonalLFT`
-- coefficient-normalization helpers
-- invariant-check helpers
-- private explicit RCF constructor for tests
-- white-box tracing hooks
-- progress scheduler internals
-- memoization caches, if later needed
+### 16.3 Pending tests
+
+Use opt-in build tags such as:
+
+    //go:build pending
+
+Pending tests should remain in the same package directory.
 
 ---
 
-## 18. Open Questions
+## 17. Resolved API Decisions
 
-1. Should `Compare` be public in this phase, or deferred until stuck/progress behavior is better characterized?
-2. Should `RCFTermKind` eventually include additional non-numeric stream states beyond `EOF` and `±Inf`?
-3. Should degree-based convenience helpers such as `SinDeg` exist publicly, or should radians-only remain the rule?
-4. Should `Take(n)` preserve metadata indicating whether the prefix ended by count limit or by source exhaustion, beyond the returned `error`?
-5. Should `Range.Cmp` be defined in terms of exact interval width, projective width, or another uncertainty metric?
-6. Should `Convergent()` remain finite-only permanently, or should a later API allow it to mean “convergent of the currently emitted prefix”?
+The following decisions are considered settled for the current phase:
 
-Current draft answers:
+- constructors create `GCFSource`
+- arithmetic operates on `GCF`
+- `GCFSource` is immutable
+- `GCF` is immutable
+- `PQTerm` includes value and EOF
+- `RCFTerm` includes value and EOF
+- `Range` stores `Outside` explicitly
+- `Take(n)` returns only the finite prefix and an error
+- cloning is not needed publicly
+- public non-finite term output is deferred
 
-- `Compare` remains provisional
-- `RCFTermKind` stays small in V3
-- radians-only remains the rule
-- `Take(n)` uses `io.EOF` to indicate early exhaustion
-- `Range.Cmp` remains semantically specified but not fully formalized
-- `Convergent()` is finite-only in V3
-<!-- EOF PublicAPI.md  v3 -->
+---
+
+## 18. Immediate Next Implementation Slice
+
+The first code slice should define the public skeleton and the first infinite source:
+
+- `api_types.go`
+- `pq_term.go`
+- `rcf_term.go`
+- `rational.go`
+- `bound.go`
+- `range.go`
+- `source.go`
+- `gcf.go`
+- `sqrt2_source.go`
+
+The first tests should focus on:
+
+- `GCFSource`
+- `PQTerm`
+- `RCFTerm`
+- `Range`
+- `FromSource`
+- `Sqrt2()`
+
+<!-- PublicAPI.md v4 -->

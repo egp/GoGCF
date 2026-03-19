@@ -1,4 +1,4 @@
-<!-- HighLevelDesign.md v2 -->
+<!-- HighLevelDesign.md v3 -->
 # HighLevelDesign.md
 
 # Continued Fraction Arithmetic Library High-Level Design
@@ -29,6 +29,7 @@ The design is driven by the following priorities:
 4. strong black-box and white-box testability
 5. small public API
 6. extensibility toward Gosper-style arithmetic and later unary/transcendental work
+7. idiomatic Go structure and naming
 
 Performance is secondary.
 
@@ -54,27 +55,26 @@ At a high level:
 
 ## 4. Simple Diagram
 
-    +------------------+        lift/open         +------------------+
-    |    GCFSource     | -----------------------> |       GCF        |
-    | immutable input  |                          | immutable eval   |
-    | emits PQTerm     |                          | emits RCFTerm    |
-    +------------------+                          +------------------+
-             |                                              |
-             | built by                                      | observed by
-             |                                               |
-             v                                               v
-    +------------------+                          +------------------+
-    | constructors and |                          | Range, Take,     |
-    | named sources    |                          | Convergent       |
-    +------------------+                          +------------------+
-                                                           |
-                                                           | implemented by
-                                                           v
-                                                 +------------------+
-                                                 | ULFT / BLFT /    |
-                                                 | DiagonalLFT      |
-                                                 | internal engine  |
-                                                 +------------------+
+    +------------------+      FromSource       +------------------+
+    |    GCFSource     | --------------------> |       GCF        |
+    | immutable input  |                       | immutable eval   |
+    | emits PQTerm     |                       | emits RCFTerm    |
+    +------------------+                       +------------------+
+             |                                           |
+             | built by                                   | observed by
+             v                                           v
+    +------------------+                       +------------------+
+    | constructors and |                       | Range, Take,     |
+    | named sources    |                       | Convergent       |
+    +------------------+                       +------------------+
+                                                        |
+                                                        | implemented by
+                                                        v
+                                              +------------------+
+                                              | ULFT / BLFT /    |
+                                              | DiagonalLFT      |
+                                              | internal engine  |
+                                              +------------------+
 
 ---
 
@@ -90,7 +90,7 @@ It represents the input side of the system.
 
 #### Responsibilities
 
-- provide the next generalized term `(p, q)`
+- provide the next generalized term as a `PQTerm`
 - return a new immutable remainder source
 - represent exact finite or infinite sources
 - support named sources such as `Pi()`, `E()`, and `Sqrt2()`
@@ -106,7 +106,7 @@ Conceptually:
 
 - `GCFSource` is not itself an arithmetic evaluator
 - it does not expose `Range()` or `Convergent()`
-- source exhaustion is represented by `io.EOF`
+- source exhaustion is represented as `PQTerm` EOF rather than as a required exceptional condition
 
 ---
 
@@ -132,7 +132,7 @@ Conceptually:
 
     Next() -> (RCFTerm, GCF remainder, error)
     Range() -> Range
-    Take(n) -> (prefix GCF, rest GCF, error)
+    Take(n) -> (prefix GCF, error)
     Convergent() -> (Rational, error)
 
 #### Notes
@@ -153,6 +153,7 @@ Conceptually:
 
 - represent one ingested generalized term
 - carry exact `BigInt` numerator/denominator-like components
+- represent source EOF as an ordinary tagged term
 - remain simple and transparent for tests
 
 #### Notes
@@ -171,12 +172,10 @@ This is an ingestion type, not an emission type.
 
 - represent ordinary emitted RCF terms
 - represent output-side EOF
-- represent positive infinity
-- represent negative infinity
 
 #### Notes
 
-This avoids overloading `*big.Int` with non-numeric stream signals.
+This avoids overloading `*big.Int` with non-numeric stream signals while keeping the initial public surface intentionally small.
 
 ---
 
@@ -221,7 +220,7 @@ A `Bound` is not itself a range. It is one half of a `Range`.
 
 #### Responsibilities
 
-- represent inside or outside uncertainty using `Lo` and `Hi`
+- represent uncertainty using `Lo`, `Hi`, and explicit `Outside`
 - support `IsInside()`
 - support `IsOutside()`
 - support `IsExact()`
@@ -255,6 +254,14 @@ z(x)=\frac{ax+b}{cx+d}
 - emit output terms or defer ingestion
 - support normalization and invariant checks
 
+#### Required initializer
+
+The ULFT identity matrix shall be available:
+
+    (1,0)/(0,1)
+
+This identity will be used to initialize selected evaluator states.
+
 ---
 
 ### 6.2 BinaryLFT
@@ -274,6 +281,26 @@ z(x,y)=\frac{axy+bx+cy+d}{exy+fx+gy+h}
 - decide whether to ingest from left, ingest from right, or emit output
 - support exact arithmetic for `+`, `-`, `*`, and `/`
 - support range and progress logic
+
+#### Required initializer
+
+The BLFT identity-style initializer shall be available:
+
+    (1,0,0,0)/(0,0,0,1)
+
+This identity will be used to initialize selected evaluator states.
+
+#### Core decision machine
+
+The most important part of the project is the internal decision machine whose binary-step action space is exactly:
+
+- ingest left
+- ingest right
+- emit output
+
+Nothing else is a primary binary evaluation action.
+
+That decision machine should be represented explicitly in internal code and targeted directly by white-box tests.
 
 ---
 
@@ -301,10 +328,10 @@ Possible examples:
 - unary-op evaluator
 - binary-op evaluator
 - finite-prefix evaluator
-- infinity evaluator
+- exhausted evaluator
 - error/stuck sentinel evaluator
 
-The exact representation is still open.
+The exact concrete node representation is up to the implementation.
 
 ---
 
@@ -361,7 +388,7 @@ The design uses immutable remainder-returning semantics rather than public mutat
 ### 8.2 Cost
 
 - more object creation conceptually
-- implementation may later want sharing or memoization internally
+- implementation may later want structural sharing or memoization internally
 
 This cost is acceptable because correctness and clarity come first.
 
@@ -373,23 +400,21 @@ The system treats all sources as infinite until exhaustion.
 
 ### Source side
 
-- `GCFSource` returns `io.EOF` when exhausted
+- `GCFSource.NextPQ()` emits a `PQTerm`
+- source exhaustion appears as EOF in `PQTerm`
 
 ### Evaluator side
 
-- `GCF.Next()` emits `RCFTerm`
-- output-side end of stream is represented by `RCFTerm` with EOF kind
+- `GCF.Next()` emits an `RCFTerm`
+- output-side end of stream is represented by EOF in `RCFTerm`
 
-This asymmetry is intentional:
-
-- source exhaustion is an input protocol event
-- emitted EOF is an output stream result
+This symmetry is intentional.
 
 ---
 
 ## 10. Arithmetic Construction Model
 
-The current intended construction model is:
+The intended construction model is:
 
 - constructors create `GCFSource`
 - `FromSource` creates `GCF`
@@ -449,6 +474,12 @@ Use only the public API to verify:
 - convergent calculation
 - target formula expression shape
 
+Recommended conventions:
+
+- package `cf_test`
+- file suffix `*_bb_test.go`
+- test names prefixed `TestBB_`
+
 ### 12.2 White-box tests
 
 Use same-package test access to verify:
@@ -458,8 +489,21 @@ Use same-package test access to verify:
 - invariant checks
 - stuck/non-progress detection
 - transform scheduling choices
+- explicit three-action decision-machine behavior
 
-### 12.3 TDD pattern
+Recommended conventions:
+
+- package `cf`
+- file suffix `*_wb_test.go`
+- test names prefixed `TestWB_`
+
+### 12.3 Pending tests
+
+Pending or intentionally not-yet-green tests should remain in the same package directory and use opt-in build tags such as:
+
+    //go:build pending
+
+### 12.4 TDD pattern
 
 The normal pattern remains:
 
@@ -510,41 +554,35 @@ Core `GCF` interface and shared evaluator helpers.
 
 First named infinite procedural `GCFSource`.
 
-### `api_blackbox_test.go`
+### `api_bb_test.go`
 
 Initial black-box API tests.
 
-### `sqrt2_source_test.go`
+### `sqrt2_source_bb_test.go`
 
-Initial tests for the first infinite named source.
+Initial black-box tests for the first infinite named source.
+
+### `decision_machine_wb_test.go`
+
+Early white-box tests for the three-action binary decision machine.
 
 ---
 
-## 14. Open Design Questions
+## 14. Resolved Design Decisions
 
-The following questions remain open at the high-level design stage.
+The following decisions are considered settled for the current phase:
 
-### 14.1 `GCF` concrete representation
-
-Should `GCF` be an interface, a struct wrapping internal nodes, or both?
-
-### 14.2 Source/evaluator boundary
-
-Should some arithmetic constructors be able to operate directly on `GCFSource`, or should all arithmetic require explicit lifting first?
-
-### 14.3 Range formalization
-
-How exactly should `Range.Cmp()` define width and informativeness?
-
-### 14.4 Infinity behavior
-
-Should additional non-finite output states eventually be represented beyond EOF and `±Inf`?
-
-### 14.5 Internal sharing
-
-If later needed, should memoization or structural sharing be added internally for repeated tails?
-
-These questions do not block the first simple API slice.
+- immutable `GCFSource`
+- immutable `GCF`
+- constructors create `GCFSource`
+- arithmetic operates on `GCF`
+- no public cloning
+- `Take(n)` returns only the finite prefix and an error
+- `PQTerm` includes EOF
+- `RCFTerm` initially includes only value and EOF
+- `Range` stores `Outside` explicitly
+- ULFT and BLFT identity initializers are required
+- BB and WB tests stay in the same package directory but are distinguished by package, file suffix, and test-name prefix
 
 ---
 
@@ -561,8 +599,9 @@ After this design document, the recommended next implementation steps are:
    - `RCFTerm`
    - `Range`
 4. implement the first named infinite source: `sqrt(2)`
-5. keep arithmetic operators as stubs until the first tests are in place
+5. add production stubs for not-yet-implemented arithmetic pieces
+6. keep arithmetic operators simple or stubbed until the first tests are in place
 
 This keeps development aligned with the Requirements Specification and the TDD workflow.
 
-<!-- HighLevelDesign.md v2 -->
+<!-- HighLevelDesign.md v3 -->
