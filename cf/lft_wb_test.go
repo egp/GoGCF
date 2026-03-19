@@ -67,4 +67,81 @@ func assertBigIntString(t *testing.T, label string, got interface{ String() stri
 	}
 }
 
+func TestWB_BinaryStepState_Choose_EmitOutputWhenAvailable(t *testing.T) {
+	state := binaryStepState{
+		canEmitOutput:  true,
+		canIngestLeft:  true,
+		canIngestRight: true,
+	}
+
+	got, err := state.choose()
+	if err != nil {
+		t.Fatalf("choose() error: %v", err)
+	}
+	if got != decisionEmitOutput {
+		t.Fatalf("choose() = %v, want %v", got, decisionEmitOutput)
+	}
+}
+
+func TestWB_BinaryStepState_Choose_IngestLeftWhenOnlyLeftAvailable(t *testing.T) {
+	state := binaryStepState{
+		canEmitOutput:  false,
+		canIngestLeft:  true,
+		canIngestRight: false,
+	}
+
+	got, err := state.choose()
+	if err != nil {
+		t.Fatalf("choose() error: %v", err)
+	}
+	if got != decisionIngestLeft {
+		t.Fatalf("choose() = %v, want %v", got, decisionIngestLeft)
+	}
+}
+
+func TestWB_BinaryStepState_Choose_IngestRightWhenOnlyRightAvailable(t *testing.T) {
+	state := binaryStepState{
+		canEmitOutput:  false,
+		canIngestLeft:  false,
+		canIngestRight: true,
+	}
+
+	got, err := state.choose()
+	if err != nil {
+		t.Fatalf("choose() error: %v", err)
+	}
+	if got != decisionIngestRight {
+		t.Fatalf("choose() = %v, want %v", got, decisionIngestRight)
+	}
+}
+
+func TestWB_BinaryStepState_Choose_PrefersLeftOnSymmetricIngestTie(t *testing.T) {
+	state := binaryStepState{
+		canEmitOutput:  false,
+		canIngestLeft:  true,
+		canIngestRight: true,
+	}
+
+	got, err := state.choose()
+	if err != nil {
+		t.Fatalf("choose() error: %v", err)
+	}
+	if got != decisionIngestLeft {
+		t.Fatalf("choose() = %v, want %v", got, decisionIngestLeft)
+	}
+}
+
+func TestWB_BinaryStepState_Choose_ReturnsErrStuckWhenNoPrimaryActionAvailable(t *testing.T) {
+	state := binaryStepState{
+		canEmitOutput:  false,
+		canIngestLeft:  false,
+		canIngestRight: false,
+	}
+
+	_, err := state.choose()
+	if err != ErrStuck {
+		t.Fatalf("choose() error = %v, want %v", err, ErrStuck)
+	}
+}
+
 // cf/lft_wb_test.go v1

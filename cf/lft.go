@@ -1,4 +1,4 @@
-// cf/lft.go v2
+// cf/lft.go v4
 package cf
 
 import "math/big"
@@ -27,6 +27,12 @@ type binaryLFT struct {
 	f *big.Int
 	g *big.Int
 	h *big.Int
+}
+
+type binaryStepState struct {
+	canEmitOutput  bool
+	canIngestLeft  bool
+	canIngestRight bool
 }
 
 func identityUnaryLFT() unaryLFT {
@@ -60,4 +66,17 @@ func (d binaryDecision) isValid() bool {
 	}
 }
 
-// cf/lft.go v2
+func (s binaryStepState) choose() (binaryDecision, error) {
+	switch {
+	case s.canEmitOutput:
+		return decisionEmitOutput, nil
+	case s.canIngestLeft:
+		return decisionIngestLeft, nil
+	case s.canIngestRight:
+		return decisionIngestRight, nil
+	default:
+		return 0, ErrStuck
+	}
+}
+
+// cf/lft.go v4
