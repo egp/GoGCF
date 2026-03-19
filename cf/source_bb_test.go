@@ -173,5 +173,52 @@ func TestBB_FromSource_Sqrt2_TakeThreeReturnsFinitePrefix_1_2_2(t *testing.T) {
 		t.Fatalf("prefix final term should be EOF")
 	}
 }
+func TestBB_FromSource_Int64_TakeOne_ConvergentIsSevenOverOne(t *testing.T) {
+	g := cf.FromSource(cf.Int64(7))
+
+	prefix, err := g.Take(1)
+	if err != nil {
+		t.Fatalf("Take(1) error: %v", err)
+	}
+
+	r, err := prefix.Convergent()
+	if err != nil {
+		t.Fatalf("Convergent() error: %v", err)
+	}
+
+	if r.Num == nil || r.Den == nil {
+		t.Fatalf("Convergent() should return non-nil numerator and denominator")
+	}
+	if got, want := r.Num.String(), "7"; got != want {
+		t.Fatalf("numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Den.String(), "1"; got != want {
+		t.Fatalf("denominator = %s, want %s", got, want)
+	}
+}
+
+func TestBB_FromSource_Sqrt2_TakeThree_ConvergentIsSevenOverFive(t *testing.T) {
+	g := cf.FromSource(cf.Sqrt2())
+
+	prefix, err := g.Take(3)
+	if err != nil {
+		t.Fatalf("Take(3) error: %v", err)
+	}
+
+	r, err := prefix.Convergent()
+	if err != nil {
+		t.Fatalf("Convergent() error: %v", err)
+	}
+
+	if r.Num == nil || r.Den == nil {
+		t.Fatalf("Convergent() should return non-nil numerator and denominator")
+	}
+	if got, want := r.Num.String(), "7"; got != want {
+		t.Fatalf("numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Den.String(), "5"; got != want {
+		t.Fatalf("denominator = %s, want %s", got, want)
+	}
+}
 
 // cf/source_bb_test.go v1

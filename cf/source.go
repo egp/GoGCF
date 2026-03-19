@@ -1,4 +1,4 @@
-// cf/source.go v4
+// cf/source.go v5
 package cf
 
 import (
@@ -161,7 +161,24 @@ func (g rcfPrefixGCF) Take(n int) (GCF, error) {
 }
 
 func (g rcfPrefixGCF) Convergent() (Rational, error) {
-	return Rational{}, ErrUndefined
+	if g.index >= len(g.terms) {
+		return Rational{}, ErrUndefined
+	}
+
+	num := new(big.Int).Set(g.terms[len(g.terms)-1])
+	den := big.NewInt(1)
+
+	for i := len(g.terms) - 2; i >= g.index; i-- {
+		nextNum := new(big.Int).Mul(g.terms[i], num)
+		nextNum.Add(nextNum, den)
+
+		num, den = nextNum, num
+	}
+
+	return Rational{
+		Num: num,
+		Den: den,
+	}, nil
 }
 
 func exactInt64Range(v int64) Range {
@@ -183,4 +200,4 @@ func exactInt64Range(v int64) Range {
 	}
 }
 
-// cf/source.go v4
+// cf/source.go v5

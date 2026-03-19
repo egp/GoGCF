@@ -1,7 +1,10 @@
 // cf/source_wb_test.go v1
 package cf
 
-import "testing"
+import (
+	"math/big"
+	"testing"
+)
 
 func TestWB_Int64Source_ConcreteStateTransitionsToEmitted(t *testing.T) {
 	src := Int64(7)
@@ -92,6 +95,43 @@ func TestWB_FromSource_Sqrt2_TakeDoesNotMutateOriginalEvaluator(t *testing.T) {
 	}
 	if srcAfterNext.index != 1 {
 		t.Fatalf("remainder sqrt2 index = %d, want 1", srcAfterNext.index)
+	}
+}
+func TestWB_RCFPrefixGCF_ConvergentOnConcretePrefix_SevenOverFive(t *testing.T) {
+	prefix := rcfPrefixGCF{
+		terms: []*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(2)},
+		index: 0,
+	}
+
+	r, err := prefix.Convergent()
+	if err != nil {
+		t.Fatalf("Convergent() error: %v", err)
+	}
+
+	if got, want := r.Num.String(), "7"; got != want {
+		t.Fatalf("numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Den.String(), "5"; got != want {
+		t.Fatalf("denominator = %s, want %s", got, want)
+	}
+}
+
+func TestWB_RCFPrefixGCF_ConvergentUsesRemainingTermsFromIndex(t *testing.T) {
+	prefix := rcfPrefixGCF{
+		terms: []*big.Int{big.NewInt(9), big.NewInt(1), big.NewInt(2), big.NewInt(2)},
+		index: 1,
+	}
+
+	r, err := prefix.Convergent()
+	if err != nil {
+		t.Fatalf("Convergent() error: %v", err)
+	}
+
+	if got, want := r.Num.String(), "7"; got != want {
+		t.Fatalf("numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Den.String(), "5"; got != want {
+		t.Fatalf("denominator = %s, want %s", got, want)
 	}
 }
 
