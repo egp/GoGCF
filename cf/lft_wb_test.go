@@ -496,5 +496,125 @@ func TestWB_BinaryLFT_EvalAt_LinearYTermUsesC(t *testing.T) {
 	assertBigIntString(t, "r.Num", r.Num, "12")
 	assertBigIntString(t, "r.Den", r.Den, "1")
 }
+func TestWB_BinaryLFT_RangeFromXYRanges_Add_OnFiniteInsideRectangle_GivesInsideRangeFromCorners(t *testing.T) {
+	b := additionBinaryLFT()
+
+	xr := Range{
+		Lo:      Bound{Kind: BoundFinite, Value: Rational{Num: big.NewInt(1), Den: big.NewInt(1)}, Closed: true},
+		Hi:      Bound{Kind: BoundFinite, Value: Rational{Num: big.NewInt(2), Den: big.NewInt(1)}, Closed: true},
+		Outside: false,
+	}
+	yr := Range{
+		Lo:      Bound{Kind: BoundFinite, Value: Rational{Num: big.NewInt(10), Den: big.NewInt(1)}, Closed: true},
+		Hi:      Bound{Kind: BoundFinite, Value: Rational{Num: big.NewInt(20), Den: big.NewInt(1)}, Closed: true},
+		Outside: false,
+	}
+
+	zr, err := b.rangeFromXYRanges(xr, yr)
+	if err != nil {
+		t.Fatalf("rangeFromXYRanges() error: %v", err)
+	}
+	if zr.Outside {
+		t.Fatalf("rangeFromXYRanges() should return an inside range")
+	}
+	if zr.IsExact() {
+		t.Fatalf("rangeFromXYRanges() should not be exact")
+	}
+
+	assertBigIntString(t, "zr.Lo.Value.Num", zr.Lo.Value.Num, "11")
+	assertBigIntString(t, "zr.Lo.Value.Den", zr.Lo.Value.Den, "1")
+	assertBigIntString(t, "zr.Hi.Value.Num", zr.Hi.Value.Num, "22")
+	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "1")
+	if !zr.Lo.Closed || !zr.Hi.Closed {
+		t.Fatalf("corner-derived finite bounds should be closed")
+	}
+}
+
+func TestWB_BinaryLFT_RangeFromXYRanges_Div_OnFiniteInsideRectangle_GivesInsideRangeFromCorners(t *testing.T) {
+	b := divisionBinaryLFT()
+
+	xr := Range{
+		Lo:      Bound{Kind: BoundFinite, Value: Rational{Num: big.NewInt(5), Den: big.NewInt(1)}, Closed: true},
+		Hi:      Bound{Kind: BoundFinite, Value: Rational{Num: big.NewInt(6), Den: big.NewInt(1)}, Closed: true},
+		Outside: false,
+	}
+	yr := Range{
+		Lo:      Bound{Kind: BoundFinite, Value: Rational{Num: big.NewInt(2), Den: big.NewInt(1)}, Closed: true},
+		Hi:      Bound{Kind: BoundFinite, Value: Rational{Num: big.NewInt(3), Den: big.NewInt(1)}, Closed: true},
+		Outside: false,
+	}
+
+	zr, err := b.rangeFromXYRanges(xr, yr)
+	if err != nil {
+		t.Fatalf("rangeFromXYRanges() error: %v", err)
+	}
+	if zr.Outside {
+		t.Fatalf("rangeFromXYRanges() should return an inside range")
+	}
+	if zr.IsExact() {
+		t.Fatalf("rangeFromXYRanges() should not be exact")
+	}
+
+	assertBigIntString(t, "zr.Lo.Value.Num", zr.Lo.Value.Num, "5")
+	assertBigIntString(t, "zr.Lo.Value.Den", zr.Lo.Value.Den, "3")
+	assertBigIntString(t, "zr.Hi.Value.Num", zr.Hi.Value.Num, "3")
+	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "1")
+	if !zr.Lo.Closed || !zr.Hi.Closed {
+		t.Fatalf("corner-derived finite bounds should be closed")
+	}
+}
+func TestWB_NormalizedRational_ReducesByGCD(t *testing.T) {
+	r, err := normalizedRational(Rational{
+		Num: big.NewInt(6),
+		Den: big.NewInt(8),
+	})
+	if err != nil {
+		t.Fatalf("normalizedRational() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "3")
+	assertBigIntString(t, "r.Den", r.Den, "4")
+}
+
+func TestWB_NormalizedRational_MovesSignToNumerator(t *testing.T) {
+	r, err := normalizedRational(Rational{
+		Num: big.NewInt(6),
+		Den: big.NewInt(-8),
+	})
+	if err != nil {
+		t.Fatalf("normalizedRational() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "-3")
+	assertBigIntString(t, "r.Den", r.Den, "4")
+}
+
+func TestWB_NormalizedRational_NormalizesZeroToZeroOverOne(t *testing.T) {
+	r, err := normalizedRational(Rational{
+		Num: big.NewInt(0),
+		Den: big.NewInt(8),
+	})
+	if err != nil {
+		t.Fatalf("normalizedRational() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "0")
+	assertBigIntString(t, "r.Den", r.Den, "1")
+}
+
+func TestWB_BinaryLFT_EvalAt_ReturnsCanonicalReducedRational(t *testing.T) {
+	b := divisionBinaryLFT()
+
+	r, err := b.evalAt(
+		Rational{Num: big.NewInt(6), Den: big.NewInt(1)},
+		Rational{Num: big.NewInt(8), Den: big.NewInt(1)},
+	)
+	if err != nil {
+		t.Fatalf("evalAt() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "3")
+	assertBigIntString(t, "r.Den", r.Den, "4")
+}
 
 // cf/lft_wb_test.go v1

@@ -37,14 +37,15 @@ func TestWB_BinaryGCF_Next_FirstCallOnDivTwelveOverFive_LeavesStepwiseBinaryRema
 		t.Fatalf("first Next() should leave a stepwise binary remainder, not a resolved prefix")
 	}
 
-	r, ok := nextBG.op.exactQuotient()
-	if !ok {
-		t.Fatalf("remainder exactQuotient() should succeed")
+	r := nextBG.Range()
+	if !r.IsExact() {
+		t.Fatalf("remainder Range() should be exact")
 	}
-	assertBigIntString(t, "r.Num", r.Num, "5")
-	assertBigIntString(t, "r.Den", r.Den, "2")
+	assertBigIntString(t, "r.Lo.Value.Num", r.Lo.Value.Num, "5")
+	assertBigIntString(t, "r.Lo.Value.Den", r.Lo.Value.Den, "2")
+	assertBigIntString(t, "r.Hi.Value.Num", r.Hi.Value.Num, "5")
+	assertBigIntString(t, "r.Hi.Value.Den", r.Hi.Value.Den, "2")
 }
-
 func TestWB_BinaryGCF_Next_SecondCallOnDivTwelveOverFive_LeavesStepwiseBinaryRemainder(t *testing.T) {
 	g := Div(FromSource(Int64(12)), FromSource(Int64(5)))
 
@@ -81,12 +82,14 @@ func TestWB_BinaryGCF_Next_SecondCallOnDivTwelveOverFive_LeavesStepwiseBinaryRem
 		t.Fatalf("second Next() should still leave a stepwise binary remainder")
 	}
 
-	r, ok := nextBG.op.exactQuotient()
-	if !ok {
-		t.Fatalf("second remainder exactQuotient() should succeed")
+	r := nextBG.Range()
+	if !r.IsExact() {
+		t.Fatalf("second remainder Range() should be exact")
 	}
-	assertBigIntString(t, "r.Num", r.Num, "2")
-	assertBigIntString(t, "r.Den", r.Den, "1")
+	assertBigIntString(t, "r.Lo.Value.Num", r.Lo.Value.Num, "2")
+	assertBigIntString(t, "r.Lo.Value.Den", r.Lo.Value.Den, "1")
+	assertBigIntString(t, "r.Hi.Value.Num", r.Hi.Value.Num, "2")
+	assertBigIntString(t, "r.Hi.Value.Den", r.Hi.Value.Den, "1")
 }
 
 func TestWB_BinaryGCF_Next_OnResolvedNodeWrapsResolvedRemainderBackIntoBinaryGCF(t *testing.T) {

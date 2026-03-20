@@ -3,8 +3,8 @@ package cf
 
 import "testing"
 
-func TestWB_BinaryGCF_Step_PrefersLeftWhenBothChildrenCanIngest(t *testing.T) {
-	g := Add(FromSource(Int64(3)), FromSource(Int64(5)))
+func TestWB_BinaryGCF_Step_PrefersLeftWhenBothChildrenCanIngestAndNoEmitIsCertified(t *testing.T) {
+	g := Add(FromSource(Int64(3)), FromSource(Sqrt2()))
 
 	bg, ok := g.(binaryGCF)
 	if !ok {
@@ -24,9 +24,8 @@ func TestWB_BinaryGCF_Step_PrefersLeftWhenBothChildrenCanIngest(t *testing.T) {
 	assertBigIntString(t, "op.c", next.op.c, "0")
 	assertBigIntString(t, "op.d", next.op.d, "1")
 }
-
-func TestWB_BinaryGCF_Step_ChoosesRightWhenLeftIsExhausted(t *testing.T) {
-	g := Add(FromSource(Int64(3)), FromSource(Int64(5)))
+func TestWB_BinaryGCF_Step_ChoosesRightWhenLeftIsExhaustedAndNoEmitIsCertified(t *testing.T) {
+	g := Add(FromSource(Int64(3)), FromSource(Sqrt2()))
 
 	bg, ok := g.(binaryGCF)
 	if !ok {
@@ -50,11 +49,10 @@ func TestWB_BinaryGCF_Step_ChoosesRightWhenLeftIsExhausted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("next2.right.Next() error: %v", err)
 	}
-	if !rightTerm.IsEOF() {
-		t.Fatalf("right child should be exhausted after right-ingest step")
+	if !rightTerm.IsValue() {
+		t.Fatalf("right child should still be a value-producing stream after right-ingest step")
 	}
 }
-
 func TestWB_BinaryGCF_Step_ChoosesEmitWhenNeitherChildCanIngestAndExactEmitIsAvailable(t *testing.T) {
 	g := Add(FromSource(Int64(3)), FromSource(Int64(5)))
 
@@ -63,14 +61,14 @@ func TestWB_BinaryGCF_Step_ChoosesEmitWhenNeitherChildCanIngestAndExactEmitIsAva
 		t.Fatalf("Add() concrete type = %T, want binaryGCF", g)
 	}
 
-	_, next1, err := bg.step()
+	next1, err := bg.ingestLeftStep()
 	if err != nil {
-		t.Fatalf("first step() error: %v", err)
+		t.Fatalf("ingestLeftStep() error: %v", err)
 	}
 
-	_, next2, err := next1.step()
+	next2, err := next1.ingestRightStep()
 	if err != nil {
-		t.Fatalf("second step() error: %v", err)
+		t.Fatalf("ingestRightStep() error: %v", err)
 	}
 
 	action3, _, err := next2.step()

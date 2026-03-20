@@ -184,8 +184,42 @@ func (g binaryGCF) ingestRightStep() (binaryGCF, error) {
 		right: rest,
 	}, nil
 }
-
 func (g binaryGCF) emitStep() (RCFTerm, binaryGCF, error) {
+	xr := g.left.Range()
+	yr := g.right.Range()
+
+	if q, ok, err := g.op.emitCandidateFromRanges(xr, yr); err != nil {
+		return RCFTerm{}, g, err
+	} else if ok {
+		zr, err := g.op.rangeFromXYRanges(xr, yr)
+		if err != nil {
+			return RCFTerm{}, g, err
+		}
+
+		term := RCFTerm{
+			Kind:  RCFValue,
+			Value: new(big.Int).Set(q),
+		}
+
+		if z, exact := exactFiniteRangeValue(zr); exact {
+			_, rem := floorDivModBig(z.Num, z.Den)
+			if rem.Sign() == 0 {
+				return term, binaryGCF{
+					op:       g.op,
+					left:     g.left,
+					right:    g.right,
+					resolved: rcfPrefixGCF{terms: nil, index: 0},
+				}, nil
+			}
+		}
+
+		return term, binaryGCF{
+			op:    g.op.emit(q),
+			left:  g.left,
+			right: g.right,
+		}, nil
+	}
+
 	r, ok := g.op.exactQuotient()
 	if !ok {
 		return RCFTerm{}, g, ErrStuck
@@ -215,6 +249,16 @@ func (g binaryGCF) emitStep() (RCFTerm, binaryGCF, error) {
 }
 
 func (g binaryGCF) step() (binaryDecision, binaryGCF, error) {
+	xr := g.left.Range()
+	yr := g.right.Range()
+
+	canEmitOutput := false
+	if _, ok, err := g.op.emitCandidateFromRanges(xr, yr); err != nil {
+		return 0, g, err
+	} else {
+		canEmitOutput = ok
+	}
+
 	canLeft, err := canIngestFromChild(g.left)
 	if err != nil {
 		return 0, g, err
@@ -225,13 +269,12 @@ func (g binaryGCF) step() (binaryDecision, binaryGCF, error) {
 		return 0, g, err
 	}
 
-	canEmit := false
-	if !canLeft && !canRight {
-		_, canEmit = g.op.exactQuotient()
+	if !canEmitOutput && !canLeft && !canRight {
+		_, canEmitOutput = g.op.exactQuotient()
 	}
 
 	state := binaryStepState{
-		canEmitOutput:  canEmit,
+		canEmitOutput:  canEmitOutput,
 		canIngestLeft:  canLeft,
 		canIngestRight: canRight,
 	}

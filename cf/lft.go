@@ -221,26 +221,52 @@ func (b binaryLFT) evalAt(x, y Rational) (Rational, error) {
 		Den: den,
 	})
 }
-
 func (b binaryLFT) rangeFromXYRanges(xr, yr Range) (Range, error) {
-	x, ok := exactFiniteRangeValue(xr)
-	if !ok {
+	x, xExact := exactFiniteRangeValue(xr)
+	y, yExact := exactFiniteRangeValue(yr)
+	if xExact && yExact {
+		z, err := b.evalAt(x, y)
+		if err != nil {
+			return Range{}, err
+		}
+		return exactRangeFromRational(z), nil
+	}
+
+	xLo, xHi, xOK := finiteClosedInsideRangeEndpoints(xr)
+	yLo, yHi, yOK := finiteClosedInsideRangeEndpoints(yr)
+	if !xOK || !yOK {
 		return Range{}, nil
 	}
 
-	y, ok := exactFiniteRangeValue(yr)
-	if !ok {
-		return Range{}, nil
+	corners := [][2]Rational{
+		{xLo, yLo},
+		{xLo, yHi},
+		{xHi, yLo},
+		{xHi, yHi},
 	}
 
-	z, err := b.evalAt(x, y)
-	if err != nil {
-		return Range{}, err
+	var lo Rational
+	var hi Rational
+	for i, corner := range corners {
+		v, err := b.evalAt(corner[0], corner[1])
+		if err != nil {
+			return Range{}, err
+		}
+		if i == 0 {
+			lo = v
+			hi = v
+			continue
+		}
+		if rationalCmp(v, lo) < 0 {
+			lo = v
+		}
+		if rationalCmp(v, hi) > 0 {
+			hi = v
+		}
 	}
 
-	return exactRangeFromRational(z), nil
+	return finiteClosedInsideRange(lo, hi), nil
 }
-
 func normalizedRational(r Rational) (Rational, error) {
 	if r.Num == nil || r.Den == nil || r.Den.Sign() == 0 {
 		return Rational{}, ErrUndefined
@@ -252,6 +278,12 @@ func normalizedRational(r Rational) (Rational, error) {
 	if den.Sign() < 0 {
 		num.Neg(num)
 		den.Neg(den)
+	}
+
+	g := new(big.Int).GCD(nil, nil, num, den)
+	if g.Sign() != 0 && g.Cmp(big.NewInt(1)) != 0 {
+		num.Quo(num, g)
+		den.Quo(den, g)
 	}
 
 	return Rational{
@@ -289,6 +321,85 @@ func exactRangeFromRational(r Rational) Range {
 	return Range{
 		Lo:      b,
 		Hi:      b,
+		Outside: false,
+	}
+}
+func (b binaryLFT) emitCandidateFromRanges(xr, yr Range) (*big.Int, bool, error) {
+	zr, err := b.rangeFromXYRanges(xr, yr)
+	if err != nil {
+		return nil, false, err
+	}
+	if zr.Outside {
+		return nil, false, nil
+	}
+	if zr.Lo.Kind != BoundFinite || zr.Hi.Kind != BoundFinite {
+		return nil, false, nil
+	}
+	if !zr.Lo.Closed || !zr.Hi.Closed {
+		return nil, false, nil
+	}
+
+	lo, err := normalizedRational(zr.Lo.Value)
+	if err != nil {
+		return nil, false, err
+	}
+	hi, err := normalizedRational(zr.Hi.Value)
+	if err != nil {
+		return nil, false, err
+	}
+
+	qLo, _ := floorDivModBig(lo.Num, lo.Den)
+	qHi, _ := floorDivModBig(hi.Num, hi.Den)
+	if qLo.Cmp(qHi) != 0 {
+		return nil, false, nil
+	}
+
+	return qLo, true, nil
+}
+
+func finiteClosedInsideRangeEndpoints(r Range) (Rational, Rational, bool) {
+	if r.Outside {
+		return Rational{}, Rational{}, false
+	}
+	if r.Lo.Kind != BoundFinite || r.Hi.Kind != BoundFinite {
+		return Rational{}, Rational{}, false
+	}
+	if !r.Lo.Closed || !r.Hi.Closed {
+		return Rational{}, Rational{}, false
+	}
+
+	lo, err := normalizedRational(r.Lo.Value)
+	if err != nil {
+		return Rational{}, Rational{}, false
+	}
+	hi, err := normalizedRational(r.Hi.Value)
+	if err != nil {
+		return Rational{}, Rational{}, false
+	}
+	return lo, hi, true
+}
+
+func finiteClosedInsideRange(lo, hi Rational) Range {
+	loN, err := normalizedRational(lo)
+	if err != nil {
+		return Range{}
+	}
+	hiN, err := normalizedRational(hi)
+	if err != nil {
+		return Range{}
+	}
+
+	return Range{
+		Lo: Bound{
+			Kind:   BoundFinite,
+			Value:  loN,
+			Closed: true,
+		},
+		Hi: Bound{
+			Kind:   BoundFinite,
+			Value:  hiN,
+			Closed: true,
+		},
 		Outside: false,
 	}
 }

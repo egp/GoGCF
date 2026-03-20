@@ -3,7 +3,7 @@ package cf
 
 import "testing"
 
-func TestWB_BinaryGCF_EmitStep_AfterBothIngestsOnDivTwelveByFive_EmitsTwoAndLeavesFiveOverTwo(t *testing.T) {
+func TestWB_BinaryGCF_EmitStep_OnDivTwelveByFive_EmitsTwoAndLeavesExactFiveOverTwoRange(t *testing.T) {
 	g := Div(FromSource(Int64(12)), FromSource(Int64(5)))
 
 	bg, ok := g.(binaryGCF)
@@ -11,17 +11,7 @@ func TestWB_BinaryGCF_EmitStep_AfterBothIngestsOnDivTwelveByFive_EmitsTwoAndLeav
 		t.Fatalf("Div() concrete type = %T, want binaryGCF", g)
 	}
 
-	_, bg1, err := bg.step()
-	if err != nil {
-		t.Fatalf("first step() error: %v", err)
-	}
-
-	_, bg2, err := bg1.step()
-	if err != nil {
-		t.Fatalf("second step() error: %v", err)
-	}
-
-	term, next, err := bg2.emitStep()
+	term, next, err := bg.emitStep()
 	if err != nil {
 		t.Fatalf("emitStep() error: %v", err)
 	}
@@ -37,14 +27,15 @@ func TestWB_BinaryGCF_EmitStep_AfterBothIngestsOnDivTwelveByFive_EmitsTwoAndLeav
 		t.Fatalf("emitStep() term = %s, want %s", got, want)
 	}
 
-	r, ok := next.op.exactQuotient()
-	if !ok {
-		t.Fatalf("remainder exactQuotient() should succeed after emit")
+	r := next.Range()
+	if !r.IsExact() {
+		t.Fatalf("remainder Range() should be exact after emit")
 	}
-	assertBigIntString(t, "r.Num", r.Num, "5")
-	assertBigIntString(t, "r.Den", r.Den, "2")
+	assertBigIntString(t, "r.Lo.Value.Num", r.Lo.Value.Num, "5")
+	assertBigIntString(t, "r.Lo.Value.Den", r.Lo.Value.Den, "2")
+	assertBigIntString(t, "r.Hi.Value.Num", r.Hi.Value.Num, "5")
+	assertBigIntString(t, "r.Hi.Value.Den", r.Hi.Value.Den, "2")
 }
-
 func TestWB_BinaryGCF_Step_ChoosesEmitWhenExactEmitIsAvailable(t *testing.T) {
 	g := Div(FromSource(Int64(12)), FromSource(Int64(5)))
 
@@ -53,30 +44,38 @@ func TestWB_BinaryGCF_Step_ChoosesEmitWhenExactEmitIsAvailable(t *testing.T) {
 		t.Fatalf("Div() concrete type = %T, want binaryGCF", g)
 	}
 
-	_, bg1, err := bg.step()
+	action, next, err := bg.step()
 	if err != nil {
-		t.Fatalf("first step() error: %v", err)
-	}
-
-	_, bg2, err := bg1.step()
-	if err != nil {
-		t.Fatalf("second step() error: %v", err)
-	}
-
-	action, next, err := bg2.step()
-	if err != nil {
-		t.Fatalf("third step() error: %v", err)
+		t.Fatalf("step() error: %v", err)
 	}
 	if action != decisionEmitOutput {
-		t.Fatalf("third step() action = %v, want %v", action, decisionEmitOutput)
+		t.Fatalf("step() action = %v, want %v", action, decisionEmitOutput)
 	}
 
-	r, ok := next.op.exactQuotient()
-	if !ok {
-		t.Fatalf("remainder exactQuotient() should succeed after emit")
+	r := next.Range()
+	if !r.IsExact() {
+		t.Fatalf("remainder Range() should be exact after emit")
 	}
-	assertBigIntString(t, "r.Num", r.Num, "5")
-	assertBigIntString(t, "r.Den", r.Den, "2")
+	assertBigIntString(t, "r.Lo.Value.Num", r.Lo.Value.Num, "5")
+	assertBigIntString(t, "r.Lo.Value.Den", r.Lo.Value.Den, "2")
+	assertBigIntString(t, "r.Hi.Value.Num", r.Hi.Value.Num, "5")
+	assertBigIntString(t, "r.Hi.Value.Den", r.Hi.Value.Den, "2")
+}
+
+func TestWB_BinaryGCF_Step_ChoosesEmitFromPropagatedRangeWhenIntegerPartIsCertified(t *testing.T) {
+	bg := binaryGCF{
+		op:    divisionBinaryLFT(),
+		left:  FromSource(Rat64(5, 1)),
+		right: FromSource(Rat64(2, 1)),
+	}
+
+	action, _, err := bg.step()
+	if err != nil {
+		t.Fatalf("step() error: %v", err)
+	}
+	if action != decisionEmitOutput {
+		t.Fatalf("step() action = %v, want %v", action, decisionEmitOutput)
+	}
 }
 
 // cf/binary_emit_wb_test.go v1
