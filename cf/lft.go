@@ -175,5 +175,121 @@ func mul(x, y *big.Int) *big.Int {
 func addMul(x, y, z *big.Int) *big.Int {
 	return new(big.Int).Add(new(big.Int).Mul(x, y), z)
 }
+func (b binaryLFT) evalAt(x, y Rational) (Rational, error) {
+	if b.a == nil || b.b == nil || b.c == nil || b.d == nil ||
+		b.e == nil || b.f == nil || b.g == nil || b.h == nil {
+		return Rational{}, ErrUndefined
+	}
+
+	xr, err := normalizedRational(x)
+	if err != nil {
+		return Rational{}, err
+	}
+	yr, err := normalizedRational(y)
+	if err != nil {
+		return Rational{}, err
+	}
+
+	xn := xr.Num
+	xd := xr.Den
+	yn := yr.Num
+	yd := yr.Den
+
+	xyNum := new(big.Int).Mul(new(big.Int).Set(xn), new(big.Int).Set(yn))
+	commonDen := new(big.Int).Mul(new(big.Int).Set(xd), new(big.Int).Set(yd))
+
+	yScaled := new(big.Int).Mul(new(big.Int).Set(yn), new(big.Int).Set(xd))
+	xScaled := new(big.Int).Mul(new(big.Int).Set(xn), new(big.Int).Set(yd))
+
+	num := new(big.Int).Mul(new(big.Int).Set(b.a), xyNum)
+	num.Add(num, new(big.Int).Mul(new(big.Int).Set(b.b), yScaled))
+	num.Add(num, new(big.Int).Mul(new(big.Int).Set(b.c), xScaled))
+	num.Add(num, new(big.Int).Mul(new(big.Int).Set(b.d), commonDen))
+
+	den := new(big.Int).Mul(new(big.Int).Set(b.e), xyNum)
+	den.Add(den, new(big.Int).Mul(new(big.Int).Set(b.f), yScaled))
+	den.Add(den, new(big.Int).Mul(new(big.Int).Set(b.g), xScaled))
+	den.Add(den, new(big.Int).Mul(new(big.Int).Set(b.h), commonDen))
+
+	if den.Sign() == 0 {
+		return Rational{}, ErrUndefined
+	}
+
+	return normalizedRational(Rational{
+		Num: num,
+		Den: den,
+	})
+}
+
+func (b binaryLFT) rangeFromXYRanges(xr, yr Range) (Range, error) {
+	x, ok := exactFiniteRangeValue(xr)
+	if !ok {
+		return Range{}, nil
+	}
+
+	y, ok := exactFiniteRangeValue(yr)
+	if !ok {
+		return Range{}, nil
+	}
+
+	z, err := b.evalAt(x, y)
+	if err != nil {
+		return Range{}, err
+	}
+
+	return exactRangeFromRational(z), nil
+}
+
+func normalizedRational(r Rational) (Rational, error) {
+	if r.Num == nil || r.Den == nil || r.Den.Sign() == 0 {
+		return Rational{}, ErrUndefined
+	}
+
+	num := new(big.Int).Set(r.Num)
+	den := new(big.Int).Set(r.Den)
+
+	if den.Sign() < 0 {
+		num.Neg(num)
+		den.Neg(den)
+	}
+
+	return Rational{
+		Num: num,
+		Den: den,
+	}, nil
+}
+
+func exactFiniteRangeValue(r Range) (Rational, bool) {
+	if !r.IsExact() {
+		return Rational{}, false
+	}
+	if r.Lo.Kind != BoundFinite || r.Hi.Kind != BoundFinite {
+		return Rational{}, false
+	}
+	v, err := normalizedRational(r.Lo.Value)
+	if err != nil {
+		return Rational{}, false
+	}
+	return v, true
+}
+
+func exactRangeFromRational(r Rational) Range {
+	v, err := normalizedRational(r)
+	if err != nil {
+		return Range{}
+	}
+
+	b := Bound{
+		Kind:   BoundFinite,
+		Value:  v,
+		Closed: true,
+	}
+
+	return Range{
+		Lo:      b,
+		Hi:      b,
+		Outside: false,
+	}
+}
 
 // cf/lft.go v10

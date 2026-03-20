@@ -101,7 +101,15 @@ func (g binaryGCF) Next() (RCFTerm, GCF, error) {
 }
 
 func (g binaryGCF) Range() Range {
-	return Range{}
+	if g.resolved != nil {
+		return g.resolved.Range()
+	}
+
+	zr, err := g.op.rangeFromXYRanges(g.left.Range(), g.right.Range())
+	if err != nil {
+		return Range{}
+	}
+	return zr
 }
 
 func (g binaryGCF) Take(n int) (GCF, error) {

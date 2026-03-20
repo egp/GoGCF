@@ -261,7 +261,6 @@ func TestWB_AddPath_AfterBothIngests_CollapseRightEOFThenUnaryEOF_GivesEight(t *
 	assertBigIntString(t, "r.Den", r.Den, "1")
 }
 
-// append to cf/lft_wb_test.go v2
 func TestWB_BinaryLFT_ExactQuotient_AfterAddThreeAndFiveIngests_IsEightOverOne(t *testing.T) {
 	b := additionBinaryLFT()
 	b = b.ingestLeft(big.NewInt(1), big.NewInt(3))
@@ -306,6 +305,148 @@ func TestWB_BinaryLFT_Emit_TwelveOverFiveFirstDigitTwo_LeavesFiveOverTwo(t *test
 	assertBigIntString(t, "r.Den", r.Den, "2")
 }
 
-// append to cf/lft_wb_test.go v2
+func TestWB_BinaryLFT_EvalAt_Addition_ThreeAndFive_GivesEightOverOne(t *testing.T) {
+	b := additionBinaryLFT()
+
+	r, err := b.evalAt(
+		Rational{Num: big.NewInt(3), Den: big.NewInt(1)},
+		Rational{Num: big.NewInt(5), Den: big.NewInt(1)},
+	)
+	if err != nil {
+		t.Fatalf("evalAt() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "8")
+	assertBigIntString(t, "r.Den", r.Den, "1")
+}
+
+func TestWB_BinaryLFT_EvalAt_Division_FiveByTwelve_GivesFiveOverTwelve(t *testing.T) {
+	b := divisionBinaryLFT()
+
+	r, err := b.evalAt(
+		Rational{Num: big.NewInt(5), Den: big.NewInt(1)},
+		Rational{Num: big.NewInt(12), Den: big.NewInt(1)},
+	)
+	if err != nil {
+		t.Fatalf("evalAt() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "5")
+	assertBigIntString(t, "r.Den", r.Den, "12")
+}
+
+func TestWB_BinaryLFT_RangeFromXYRanges_ExactPoints_AddThreeAndFive_GivesExactEight(t *testing.T) {
+	b := additionBinaryLFT()
+
+	xr := Range{
+		Lo: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(3),
+				Den: big.NewInt(1),
+			},
+			Closed: true,
+		},
+		Hi: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(3),
+				Den: big.NewInt(1),
+			},
+			Closed: true,
+		},
+		Outside: false,
+	}
+
+	yr := Range{
+		Lo: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(5),
+				Den: big.NewInt(1),
+			},
+			Closed: true,
+		},
+		Hi: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(5),
+				Den: big.NewInt(1),
+			},
+			Closed: true,
+		},
+		Outside: false,
+	}
+
+	zr, err := b.rangeFromXYRanges(xr, yr)
+	if err != nil {
+		t.Fatalf("rangeFromXYRanges() error: %v", err)
+	}
+	if !zr.IsExact() {
+		t.Fatalf("rangeFromXYRanges() should return an exact point")
+	}
+
+	assertBigIntString(t, "zr.Lo.Value.Num", zr.Lo.Value.Num, "8")
+	assertBigIntString(t, "zr.Lo.Value.Den", zr.Lo.Value.Den, "1")
+	assertBigIntString(t, "zr.Hi.Value.Num", zr.Hi.Value.Num, "8")
+	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "1")
+}
+
+func TestWB_BinaryLFT_RangeFromXYRanges_ExactPoints_DivFiveByTwelve_GivesExactFiveOverTwelve(t *testing.T) {
+	b := divisionBinaryLFT()
+
+	xr := Range{
+		Lo: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(5),
+				Den: big.NewInt(1),
+			},
+			Closed: true,
+		},
+		Hi: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(5),
+				Den: big.NewInt(1),
+			},
+			Closed: true,
+		},
+		Outside: false,
+	}
+
+	yr := Range{
+		Lo: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(12),
+				Den: big.NewInt(1),
+			},
+			Closed: true,
+		},
+		Hi: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(12),
+				Den: big.NewInt(1),
+			},
+			Closed: true,
+		},
+		Outside: false,
+	}
+
+	zr, err := b.rangeFromXYRanges(xr, yr)
+	if err != nil {
+		t.Fatalf("rangeFromXYRanges() error: %v", err)
+	}
+	if !zr.IsExact() {
+		t.Fatalf("rangeFromXYRanges() should return an exact point")
+	}
+
+	assertBigIntString(t, "zr.Lo.Value.Num", zr.Lo.Value.Num, "5")
+	assertBigIntString(t, "zr.Lo.Value.Den", zr.Lo.Value.Den, "12")
+	assertBigIntString(t, "zr.Hi.Value.Num", zr.Hi.Value.Num, "5")
+	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "12")
+}
 
 // cf/lft_wb_test.go v1

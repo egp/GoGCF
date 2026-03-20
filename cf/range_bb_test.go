@@ -276,4 +276,50 @@ func posInfOpenBound() cf.Bound {
 	}
 }
 
+func TestBB_Add_Int64_RangeIsExactEight(t *testing.T) {
+	g := cf.Add(cf.FromSource(cf.Int64(3)), cf.FromSource(cf.Int64(5)))
+
+	r := g.Range()
+
+	if !r.IsExact() {
+		t.Fatalf("Add(Int64(3), Int64(5)).Range() should be exact")
+	}
+
+	if got, want := r.Lo.Value.Num.String(), "8"; got != want {
+		t.Fatalf("lo numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Lo.Value.Den.String(), "1"; got != want {
+		t.Fatalf("lo denominator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Num.String(), "8"; got != want {
+		t.Fatalf("hi numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Den.String(), "1"; got != want {
+		t.Fatalf("hi denominator = %s, want %s", got, want)
+	}
+}
+
+func TestBB_Div_Int64_FiveOverTwelve_RangeIsExactFiveOverTwelve(t *testing.T) {
+	g := cf.Div(cf.FromSource(cf.Int64(5)), cf.FromSource(cf.Int64(12)))
+
+	r := g.Range()
+
+	if !r.IsExact() {
+		t.Fatalf("Div(Int64(5), Int64(12)).Range() should be exact")
+	}
+
+	if got, want := r.Lo.Value.Num.String(), "5"; got != want {
+		t.Fatalf("lo numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Lo.Value.Den.String(), "12"; got != want {
+		t.Fatalf("lo denominator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Num.String(), "5"; got != want {
+		t.Fatalf("hi numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Den.String(), "12"; got != want {
+		t.Fatalf("hi denominator = %s, want %s", got, want)
+	}
+}
+
 // cf/range_bb_test.go v2
