@@ -416,4 +416,71 @@ func finiteInsideRange(lo, hi Rational, closed bool) Range {
 	}
 }
 
+type diagLFT struct {
+	a *big.Int
+	b *big.Int
+	c *big.Int
+	d *big.Int
+	e *big.Int
+	f *big.Int
+}
+
+func identityDiagLFT() diagLFT {
+	return diagLFT{
+		a: big.NewInt(0),
+		b: big.NewInt(1),
+		c: big.NewInt(0),
+		d: big.NewInt(0),
+		e: big.NewInt(0),
+		f: big.NewInt(1),
+	}
+}
+
+func (d diagLFT) evalAt(x Rational) (Rational, error) {
+	if d.a == nil || d.b == nil || d.c == nil ||
+		d.d == nil || d.e == nil || d.f == nil {
+		return Rational{}, ErrUndefined
+	}
+
+	xr, err := normalizedRational(x)
+	if err != nil {
+		return Rational{}, err
+	}
+
+	xn := xr.Num
+	xd := xr.Den
+
+	x2Num := new(big.Int).Mul(new(big.Int).Set(xn), new(big.Int).Set(xn))
+	x2Den := new(big.Int).Mul(new(big.Int).Set(xd), new(big.Int).Set(xd))
+	xScaled := new(big.Int).Mul(new(big.Int).Set(xn), new(big.Int).Set(xd))
+
+	num := new(big.Int).Mul(new(big.Int).Set(d.a), x2Num)
+	num.Add(num, new(big.Int).Mul(new(big.Int).Set(d.b), xScaled))
+	num.Add(num, new(big.Int).Mul(new(big.Int).Set(d.c), x2Den))
+
+	den := new(big.Int).Mul(new(big.Int).Set(d.d), x2Num)
+	den.Add(den, new(big.Int).Mul(new(big.Int).Set(d.e), xScaled))
+	den.Add(den, new(big.Int).Mul(new(big.Int).Set(d.f), x2Den))
+
+	if den.Sign() == 0 {
+		return Rational{}, ErrUndefined
+	}
+
+	return normalizedRational(Rational{
+		Num: num,
+		Den: den,
+	})
+}
+
+func (b binaryLFT) diagonal() diagLFT {
+	return diagLFT{
+		a: new(big.Int).Set(b.a),
+		b: new(big.Int).Add(new(big.Int).Set(b.b), b.c),
+		c: new(big.Int).Set(b.d),
+		d: new(big.Int).Set(b.e),
+		e: new(big.Int).Add(new(big.Int).Set(b.f), b.g),
+		f: new(big.Int).Set(b.h),
+	}
+}
+
 // cf/lft.go v10

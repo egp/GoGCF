@@ -616,5 +616,56 @@ func TestWB_BinaryLFT_EvalAt_ReturnsCanonicalReducedRational(t *testing.T) {
 	assertBigIntString(t, "r.Num", r.Num, "3")
 	assertBigIntString(t, "r.Den", r.Den, "4")
 }
+func TestWB_IdentityDiagLFT_HasCoefficients_0_1_0_0_0_1(t *testing.T) {
+	d := identityDiagLFT()
+
+	assertBigIntString(t, "d.a", d.a, "0")
+	assertBigIntString(t, "d.b", d.b, "1")
+	assertBigIntString(t, "d.c", d.c, "0")
+	assertBigIntString(t, "d.d", d.d, "0")
+	assertBigIntString(t, "d.e", d.e, "0")
+	assertBigIntString(t, "d.f", d.f, "1")
+}
+
+func TestWB_DiagLFT_EvalAt_Identity_FiveOverTwo(t *testing.T) {
+	d := identityDiagLFT()
+
+	r, err := d.evalAt(Rational{
+		Num: big.NewInt(5),
+		Den: big.NewInt(2),
+	})
+	if err != nil {
+		t.Fatalf("evalAt() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "5")
+	assertBigIntString(t, "r.Den", r.Den, "2")
+}
+
+func TestWB_BinaryLFT_Diagonal_AdditionDiagonalizesTo_0_2_0_0_0_1(t *testing.T) {
+	d := additionBinaryLFT().diagonal()
+
+	assertBigIntString(t, "d.a", d.a, "0")
+	assertBigIntString(t, "d.b", d.b, "2")
+	assertBigIntString(t, "d.c", d.c, "0")
+	assertBigIntString(t, "d.d", d.d, "0")
+	assertBigIntString(t, "d.e", d.e, "0")
+	assertBigIntString(t, "d.f", d.f, "1")
+}
+
+func TestWB_DiagLFT_EvalAt_AdditionDiagonal_ThreeGivesSix(t *testing.T) {
+	d := additionBinaryLFT().diagonal()
+
+	r, err := d.evalAt(Rational{
+		Num: big.NewInt(3),
+		Den: big.NewInt(1),
+	})
+	if err != nil {
+		t.Fatalf("evalAt() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "6")
+	assertBigIntString(t, "r.Den", r.Den, "1")
+}
 
 // cf/lft_wb_test.go v1
