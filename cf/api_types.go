@@ -1,4 +1,5 @@
-// cf/api_types.go v1
+// cf/api_types.go v3
+
 package cf
 
 import "math/big"
@@ -114,4 +115,201 @@ type GCF interface {
 	Convergent() (Rational, error)
 }
 
-// cf/api_types.go v1
+func (r Range) Cmp(other Range) int {
+	if rangeEquivalent(r, other) {
+		return 0
+	}
+
+	rSubOther := rangeAllowedSubsetOf(r, other)
+	otherSubR := rangeAllowedSubsetOf(other, r)
+
+	switch {
+	case rSubOther && !otherSubR:
+		return -1
+	case otherSubR && !rSubOther:
+		return 1
+	}
+
+	rClass := rangeQualityClass(r)
+	otherClass := rangeQualityClass(other)
+	if rClass != otherClass {
+		if rClass < otherClass {
+			return -1
+		}
+		return 1
+	}
+
+	switch {
+	case !r.Outside && !other.Outside:
+		return compareInsideWidth(r, other)
+	case r.Outside && other.Outside:
+		return compareOutsideWidth(r, other)
+	default:
+		return 0
+	}
+}
+
+func rangeEquivalent(a, b Range) bool {
+	return a.Outside == b.Outside &&
+		boundEqual(a.Lo, b.Lo) &&
+		boundEqual(a.Hi, b.Hi)
+}
+
+func rangeAllowedSubsetOf(a, b Range) bool {
+	switch {
+	case !a.Outside && !b.Outside:
+		return insideSubsetOf(a, b)
+	case a.Outside && b.Outside:
+		return outsideSubsetOf(a, b)
+	case !a.Outside && b.Outside:
+		return insideSubsetOfOutside(a, b)
+	case a.Outside && !b.Outside:
+		return outsideSubsetOfInside(a, b)
+	default:
+		return false
+	}
+}
+
+func insideSubsetOf(a, b Range) bool {
+	return boundLE(b.Lo, a.Lo) && boundLE(a.Hi, b.Hi)
+}
+
+func outsideSubsetOf(a, b Range) bool {
+	return boundLE(a.Lo, b.Lo) && boundLE(b.Hi, a.Hi)
+}
+
+func insideSubsetOfOutside(inside, outside Range) bool {
+	return intervalDisjoint(inside.Lo, inside.Hi, outside.Lo, outside.Hi)
+}
+
+func outsideSubsetOfInside(outside, inside Range) bool {
+	return isInsideFullLine(inside)
+}
+
+func isInsideFullLine(r Range) bool {
+	if r.Outside {
+		return false
+	}
+	return r.Lo.Kind == BoundNegInf && r.Hi.Kind == BoundPosInf
+}
+
+func intervalDisjoint(aLo, aHi, bLo, bHi Bound) bool {
+	return boundLT(aHi, bLo) || boundLT(bHi, aLo)
+}
+
+func rangeQualityClass(r Range) int {
+	if r.IsExact() {
+		return 0
+	}
+	if !r.Outside {
+		return 1
+	}
+	return 2
+}
+
+func compareInsideWidth(a, b Range) int {
+	spanCmp, ok := compareFiniteSpan(a, b)
+	if ok {
+		return spanCmp
+	}
+	return 0
+}
+
+func compareOutsideWidth(a, b Range) int {
+	spanCmp, ok := compareFiniteSpan(a, b)
+	if ok {
+		return -spanCmp
+	}
+	return 0
+}
+
+func compareFiniteSpan(a, b Range) (int, bool) {
+	aSpan, aOK := finiteSpan(a)
+	bSpan, bOK := finiteSpan(b)
+
+	switch {
+	case aOK && bOK:
+		return aSpan.Cmp(bSpan), true
+	case aOK && !bOK:
+		return -1, true
+	case !aOK && bOK:
+		return 1, true
+	default:
+		return 0, false
+	}
+}
+
+func finiteSpan(r Range) (*big.Rat, bool) {
+	if r.Lo.Kind != BoundFinite || r.Hi.Kind != BoundFinite {
+		return nil, false
+	}
+	if r.Lo.Value.Num == nil || r.Lo.Value.Den == nil || r.Hi.Value.Num == nil || r.Hi.Value.Den == nil {
+		return nil, false
+	}
+
+	lo := rationalToBigRat(r.Lo.Value)
+	hi := rationalToBigRat(r.Hi.Value)
+	return new(big.Rat).Sub(hi, lo), true
+}
+
+func rationalToBigRat(r Rational) *big.Rat {
+	return new(big.Rat).SetFrac(
+		new(big.Int).Set(r.Num),
+		new(big.Int).Set(r.Den),
+	)
+}
+
+func boundEqual(a, b Bound) bool {
+	if a.Kind != b.Kind || a.Closed != b.Closed {
+		return false
+	}
+	if a.Kind != BoundFinite {
+		return true
+	}
+	return rationalCmp(a.Value, b.Value) == 0
+}
+
+func boundLT(a, b Bound) bool {
+	return boundCmp(a, b) < 0
+}
+
+func boundLE(a, b Bound) bool {
+	return boundCmp(a, b) <= 0
+}
+
+func boundCmp(a, b Bound) int {
+	if a.Kind != b.Kind {
+		return boundKindOrder(a.Kind) - boundKindOrder(b.Kind)
+	}
+	if a.Kind != BoundFinite {
+		return 0
+	}
+	return rationalCmp(a.Value, b.Value)
+}
+
+func boundKindOrder(k BoundKind) int {
+	switch k {
+	case BoundNegInf:
+		return -1
+	case BoundFinite:
+		return 0
+	case BoundPosInf:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func rationalCmp(a, b Rational) int {
+	left := new(big.Int).Mul(
+		new(big.Int).Set(a.Num),
+		new(big.Int).Set(b.Den),
+	)
+	right := new(big.Int).Mul(
+		new(big.Int).Set(b.Num),
+		new(big.Int).Set(a.Den),
+	)
+	return left.Cmp(right)
+}
+
+// cf/api_types.go v3
