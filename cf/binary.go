@@ -1,4 +1,4 @@
-// cf/binary.go v4
+// cf/binary.go v6
 package cf
 
 import "math/big"
@@ -42,7 +42,11 @@ func Div(x, y GCF) GCF {
 }
 
 func (g binaryGCF) Next() (RCFTerm, GCF, error) {
-	return RCFTerm{Kind: RCFEOF}, g, nil
+	prefix, err := g.completeToPrefix()
+	if err != nil {
+		return RCFTerm{}, g, err
+	}
+	return prefix.Next()
 }
 
 func (g binaryGCF) Range() Range {
@@ -154,6 +158,31 @@ func (g binaryGCF) step() (binaryDecision, binaryGCF, error) {
 	}
 }
 
+func (g binaryGCF) completeToRational() (Rational, error) {
+	cur := g
+	for {
+		_, next, err := cur.step()
+		if err == nil {
+			cur = next
+			continue
+		}
+		if err != ErrStuck {
+			return Rational{}, err
+		}
+
+		u := cur.op.collapseRightEOF()
+		return u.collapseEOFToRational()
+	}
+}
+
+func (g binaryGCF) completeToPrefix() (GCF, error) {
+	r, err := g.completeToRational()
+	if err != nil {
+		return nil, err
+	}
+	return prefixGCFfromRational(r)
+}
+
 func canIngestFromChild(child GCF) (bool, error) {
 	term, _, err := child.Next()
 	if err != nil {
@@ -204,14 +233,14 @@ func multiplicationBinaryLFT() binaryLFT {
 func divisionBinaryLFT() binaryLFT {
 	return binaryLFT{
 		a: big.NewInt(0),
-		b: big.NewInt(1),
-		c: big.NewInt(0),
+		b: big.NewInt(0),
+		c: big.NewInt(1),
 		d: big.NewInt(0),
 		e: big.NewInt(0),
-		f: big.NewInt(0),
-		g: big.NewInt(1),
+		f: big.NewInt(1),
+		g: big.NewInt(0),
 		h: big.NewInt(0),
 	}
 }
 
-// cf/binary.go v4
+// cf/binary.go v6

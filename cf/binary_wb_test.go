@@ -84,7 +84,6 @@ func TestWB_Mul_ConstructsBinaryGCF_WithMultiplicationLFT(t *testing.T) {
 	assertBigIntString(t, "op.g", bg.op.g, "0")
 	assertBigIntString(t, "op.h", bg.op.h, "1")
 }
-
 func TestWB_Div_ConstructsBinaryGCF_WithDivisionLFT(t *testing.T) {
 	g := Div(FromSource(Int64(1)), FromSource(Int64(2)))
 
@@ -94,12 +93,12 @@ func TestWB_Div_ConstructsBinaryGCF_WithDivisionLFT(t *testing.T) {
 	}
 
 	assertBigIntString(t, "op.a", bg.op.a, "0")
-	assertBigIntString(t, "op.b", bg.op.b, "1")
-	assertBigIntString(t, "op.c", bg.op.c, "0")
+	assertBigIntString(t, "op.b", bg.op.b, "0")
+	assertBigIntString(t, "op.c", bg.op.c, "1")
 	assertBigIntString(t, "op.d", bg.op.d, "0")
 	assertBigIntString(t, "op.e", bg.op.e, "0")
-	assertBigIntString(t, "op.f", bg.op.f, "0")
-	assertBigIntString(t, "op.g", bg.op.g, "1")
+	assertBigIntString(t, "op.f", bg.op.f, "1")
+	assertBigIntString(t, "op.g", bg.op.g, "0")
 	assertBigIntString(t, "op.h", bg.op.h, "0")
 }
 
@@ -305,6 +304,40 @@ func TestWB_BinaryGCF_Step_DoesNotMutateOriginalNode(t *testing.T) {
 	assertBigIntString(t, "op.b", bg.op.b, "1")
 	assertBigIntString(t, "op.c", bg.op.c, "1")
 	assertBigIntString(t, "op.d", bg.op.d, "0")
+}
+
+func TestWB_BinaryGCF_CompleteToRational_AddThreeAndFive_GivesEightOverOne(t *testing.T) {
+	g := Add(FromSource(Int64(3)), FromSource(Int64(5)))
+
+	bg, ok := g.(binaryGCF)
+	if !ok {
+		t.Fatalf("Add() concrete type = %T, want binaryGCF", g)
+	}
+
+	r, err := bg.completeToRational()
+	if err != nil {
+		t.Fatalf("completeToRational() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "8")
+	assertBigIntString(t, "r.Den", r.Den, "1")
+}
+
+func TestWB_BinaryGCF_CompleteToRational_DivTwelveByFive_GivesTwelveOverFive(t *testing.T) {
+	g := Div(FromSource(Int64(12)), FromSource(Int64(5)))
+
+	bg, ok := g.(binaryGCF)
+	if !ok {
+		t.Fatalf("Div() concrete type = %T, want binaryGCF", g)
+	}
+
+	r, err := bg.completeToRational()
+	if err != nil {
+		t.Fatalf("completeToRational() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "12")
+	assertBigIntString(t, "r.Den", r.Den, "5")
 }
 
 // cf/binary_wb_test.go v1
