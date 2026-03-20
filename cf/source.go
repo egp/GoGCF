@@ -1,4 +1,4 @@
-// cf/source.go v7
+// cf/source.go v8
 package cf
 
 import (
@@ -179,6 +179,7 @@ func (g rcfPrefixGCF) Take(n int) (GCF, error) {
 	}
 
 	remaining := len(g.terms) - g.index
+	requested := n
 	if n > remaining {
 		n = remaining
 	}
@@ -193,10 +194,10 @@ func (g rcfPrefixGCF) Take(n int) (GCF, error) {
 		index: 0,
 	}
 
-	if n < remaining {
-		return prefix, nil
+	if requested > remaining {
+		return prefix, io.EOF
 	}
-	return prefix, io.EOF
+	return prefix, nil
 }
 
 func (g rcfPrefixGCF) Convergent() (Rational, error) {
@@ -287,4 +288,4 @@ func floorDivInt64(n, d int64) int64 {
 	return q
 }
 
-// cf/source.go v7
+// cf/source.go v8

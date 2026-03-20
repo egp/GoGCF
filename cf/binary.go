@@ -1,4 +1,4 @@
-// cf/binary.go v6
+// cf/binary.go v7
 package cf
 
 import "math/big"
@@ -54,11 +54,15 @@ func (g binaryGCF) Range() Range {
 }
 
 func (g binaryGCF) Take(n int) (GCF, error) {
-	return nil, ErrUndefined
+	prefix, err := g.completeToPrefix()
+	if err != nil {
+		return nil, err
+	}
+	return prefix.Take(n)
 }
 
 func (g binaryGCF) Convergent() (Rational, error) {
-	return Rational{}, ErrUndefined
+	return g.completeToRational()
 }
 
 func pqFromRCFTerm(term RCFTerm) (PQTerm, error) {
@@ -207,8 +211,8 @@ func additionBinaryLFT() binaryLFT {
 func subtractionBinaryLFT() binaryLFT {
 	return binaryLFT{
 		a: big.NewInt(0),
-		b: big.NewInt(1),
-		c: big.NewInt(-1),
+		b: big.NewInt(-1),
+		c: big.NewInt(1),
 		d: big.NewInt(0),
 		e: big.NewInt(0),
 		f: big.NewInt(0),
@@ -243,4 +247,4 @@ func divisionBinaryLFT() binaryLFT {
 	}
 }
 
-// cf/binary.go v6
+// cf/binary.go v7
