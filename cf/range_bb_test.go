@@ -322,4 +322,147 @@ func TestBB_Div_Int64_FiveOverTwelve_RangeIsExactFiveOverTwelve(t *testing.T) {
 	}
 }
 
+func TestBB_FromSource_Rat64_RangeAfterOneStepIsExactRemainingValue(t *testing.T) {
+	g := cf.FromSource(cf.Rat64(12, 5))
+
+	term, rest, err := g.Next()
+	if err != nil {
+		t.Fatalf("first Next() error: %v", err)
+	}
+	if !term.IsValue() {
+		t.Fatalf("first term should be a value")
+	}
+	value, ok := term.BigInt()
+	if !ok {
+		t.Fatalf("first term should expose a BigInt")
+	}
+	if got, want := value.String(), "2"; got != want {
+		t.Fatalf("first term = %s, want %s", got, want)
+	}
+
+	r := rest.Range()
+	if !r.IsExact() {
+		t.Fatalf("remainder Range() should be exact")
+	}
+
+	if got, want := r.Lo.Value.Num.String(), "5"; got != want {
+		t.Fatalf("lo numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Lo.Value.Den.String(), "2"; got != want {
+		t.Fatalf("lo denominator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Num.String(), "5"; got != want {
+		t.Fatalf("hi numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Den.String(), "2"; got != want {
+		t.Fatalf("hi denominator = %s, want %s", got, want)
+	}
+}
+
+func TestBB_RCFPrefixGCF_RangeOnSevenOverFivePrefixIsExact(t *testing.T) {
+	g := cf.FromSource(cf.Rat64(7, 5))
+
+	prefix, err := g.Take(3)
+	if err != nil {
+		t.Fatalf("Take(3) error: %v", err)
+	}
+
+	r := prefix.Range()
+	if !r.IsExact() {
+		t.Fatalf("prefix Range() should be exact")
+	}
+
+	if got, want := r.Lo.Value.Num.String(), "7"; got != want {
+		t.Fatalf("lo numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Lo.Value.Den.String(), "5"; got != want {
+		t.Fatalf("lo denominator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Num.String(), "7"; got != want {
+		t.Fatalf("hi numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Den.String(), "5"; got != want {
+		t.Fatalf("hi denominator = %s, want %s", got, want)
+	}
+}
+
+func TestBB_Div_Int64_TwelveOverFive_RangeAfterOneEmitIsExactFiveOverTwo(t *testing.T) {
+	g := cf.Div(cf.FromSource(cf.Int64(12)), cf.FromSource(cf.Int64(5)))
+
+	term, rest, err := g.Next()
+	if err != nil {
+		t.Fatalf("first Next() error: %v", err)
+	}
+	if !term.IsValue() {
+		t.Fatalf("first term should be a value")
+	}
+	value, ok := term.BigInt()
+	if !ok {
+		t.Fatalf("first term should expose a BigInt")
+	}
+	if got, want := value.String(), "2"; got != want {
+		t.Fatalf("first term = %s, want %s", got, want)
+	}
+
+	r := rest.Range()
+	if !r.IsExact() {
+		t.Fatalf("remainder Range() should be exact")
+	}
+
+	if got, want := r.Lo.Value.Num.String(), "5"; got != want {
+		t.Fatalf("lo numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Lo.Value.Den.String(), "2"; got != want {
+		t.Fatalf("lo denominator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Num.String(), "5"; got != want {
+		t.Fatalf("hi numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Den.String(), "2"; got != want {
+		t.Fatalf("hi denominator = %s, want %s", got, want)
+	}
+}
+
+func TestBB_Div_Int64_TwelveOverFive_RangeAfterTwoEmitsIsExactTwo(t *testing.T) {
+	g := cf.Div(cf.FromSource(cf.Int64(12)), cf.FromSource(cf.Int64(5)))
+
+	_, rest1, err := g.Next()
+	if err != nil {
+		t.Fatalf("first Next() error: %v", err)
+	}
+
+	term2, rest2, err := rest1.Next()
+	if err != nil {
+		t.Fatalf("second Next() error: %v", err)
+	}
+	if !term2.IsValue() {
+		t.Fatalf("second term should be a value")
+	}
+	value2, ok := term2.BigInt()
+	if !ok {
+		t.Fatalf("second term should expose a BigInt")
+	}
+	if got, want := value2.String(), "2"; got != want {
+		t.Fatalf("second term = %s, want %s", got, want)
+	}
+
+	r := rest2.Range()
+	if !r.IsExact() {
+		t.Fatalf("second remainder Range() should be exact")
+	}
+
+	if got, want := r.Lo.Value.Num.String(), "2"; got != want {
+		t.Fatalf("lo numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Lo.Value.Den.String(), "1"; got != want {
+		t.Fatalf("lo denominator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Num.String(), "2"; got != want {
+		t.Fatalf("hi numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Den.String(), "1"; got != want {
+		t.Fatalf("hi denominator = %s, want %s", got, want)
+	}
+}
+
 // cf/range_bb_test.go v2

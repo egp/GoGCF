@@ -110,9 +110,17 @@ func (g sourceBackedGCF) Range() Range {
 		if !src.emitted {
 			return exactInt64Range(src.value)
 		}
+
 	case rat64Source:
-		if src.index == 0 && src.den != 0 {
-			return exactRationalRange(src.num, src.den)
+		if src.index < len(src.terms) {
+			prefix := rcfPrefixGCF{
+				terms: src.terms,
+				index: src.index,
+			}
+			r, err := prefix.Convergent()
+			if err == nil {
+				return exactRangeFromRational(r)
+			}
 		}
 	}
 
@@ -170,7 +178,11 @@ func (g rcfPrefixGCF) Next() (RCFTerm, GCF, error) {
 }
 
 func (g rcfPrefixGCF) Range() Range {
-	return Range{}
+	r, err := g.Convergent()
+	if err != nil {
+		return Range{}
+	}
+	return exactRangeFromRational(r)
 }
 
 func (g rcfPrefixGCF) Take(n int) (GCF, error) {

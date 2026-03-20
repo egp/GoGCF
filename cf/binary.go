@@ -105,6 +105,10 @@ func (g binaryGCF) Range() Range {
 		return g.resolved.Range()
 	}
 
+	if r, ok := g.op.exactQuotient(); ok {
+		return exactRangeFromRational(r)
+	}
+
 	zr, err := g.op.rangeFromXYRanges(g.left.Range(), g.right.Range())
 	if err != nil {
 		return Range{}
