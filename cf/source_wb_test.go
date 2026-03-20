@@ -194,5 +194,112 @@ func TestWB_Rat64Source_ConcreteRemainderAdvancesWithoutMutatingOriginal(t *test
 		t.Fatalf("original source mutated: index = %d, want 0", s0.index)
 	}
 }
+func TestWB_BinaryLFT_IngestLeft_IdentityWithPQ_1_2(t *testing.T) {
+	b := identityBinaryLFT()
+
+	got := b.ingestLeft(big.NewInt(1), big.NewInt(2))
+
+	assertBigIntString(t, "got.a", got.a, "2")
+	assertBigIntString(t, "got.b", got.b, "0")
+	assertBigIntString(t, "got.c", got.c, "1")
+	assertBigIntString(t, "got.d", got.d, "0")
+	assertBigIntString(t, "got.e", got.e, "0")
+	assertBigIntString(t, "got.f", got.f, "1")
+	assertBigIntString(t, "got.g", got.g, "0")
+	assertBigIntString(t, "got.h", got.h, "0")
+}
+
+func TestWB_BinaryLFT_IngestRight_IdentityWithPQ_1_2(t *testing.T) {
+	b := identityBinaryLFT()
+
+	got := b.ingestRight(big.NewInt(1), big.NewInt(2))
+
+	assertBigIntString(t, "got.a", got.a, "2")
+	assertBigIntString(t, "got.b", got.b, "1")
+	assertBigIntString(t, "got.c", got.c, "0")
+	assertBigIntString(t, "got.d", got.d, "0")
+	assertBigIntString(t, "got.e", got.e, "0")
+	assertBigIntString(t, "got.f", got.f, "0")
+	assertBigIntString(t, "got.g", got.g, "1")
+	assertBigIntString(t, "got.h", got.h, "0")
+}
+
+func TestWB_BinaryLFT_IngestLeft_NonTrivialCoefficients(t *testing.T) {
+	b := binaryLFT{
+		a: big.NewInt(2),
+		b: big.NewInt(3),
+		c: big.NewInt(5),
+		d: big.NewInt(7),
+		e: big.NewInt(11),
+		f: big.NewInt(13),
+		g: big.NewInt(17),
+		h: big.NewInt(19),
+	}
+
+	got := b.ingestLeft(big.NewInt(23), big.NewInt(29))
+
+	assertBigIntString(t, "got.a", got.a, "61")
+	assertBigIntString(t, "got.b", got.b, "152")
+	assertBigIntString(t, "got.c", got.c, "46")
+	assertBigIntString(t, "got.d", got.d, "69")
+	assertBigIntString(t, "got.e", got.e, "332")
+	assertBigIntString(t, "got.f", got.f, "512")
+	assertBigIntString(t, "got.g", got.g, "253")
+	assertBigIntString(t, "got.h", got.h, "299")
+}
+
+func TestWB_BinaryLFT_IngestRight_NonTrivialCoefficients(t *testing.T) {
+	b := binaryLFT{
+		a: big.NewInt(2),
+		b: big.NewInt(3),
+		c: big.NewInt(5),
+		d: big.NewInt(7),
+		e: big.NewInt(11),
+		f: big.NewInt(13),
+		g: big.NewInt(17),
+		h: big.NewInt(19),
+	}
+
+	got := b.ingestRight(big.NewInt(23), big.NewInt(29))
+
+	assertBigIntString(t, "got.a", got.a, "61")
+	assertBigIntString(t, "got.b", got.b, "46")
+	assertBigIntString(t, "got.c", got.c, "152")
+	assertBigIntString(t, "got.d", got.d, "115")
+	assertBigIntString(t, "got.e", got.e, "332")
+	assertBigIntString(t, "got.f", got.f, "253")
+	assertBigIntString(t, "got.g", got.g, "512")
+	assertBigIntString(t, "got.h", got.h, "391")
+}
+
+func TestWB_BinaryLFT_IngestLeft_DoesNotMutateOriginal(t *testing.T) {
+	b := identityBinaryLFT()
+
+	_ = b.ingestLeft(big.NewInt(1), big.NewInt(2))
+
+	assertBigIntString(t, "b.a", b.a, "1")
+	assertBigIntString(t, "b.b", b.b, "0")
+	assertBigIntString(t, "b.c", b.c, "0")
+	assertBigIntString(t, "b.d", b.d, "0")
+	assertBigIntString(t, "b.e", b.e, "0")
+	assertBigIntString(t, "b.f", b.f, "0")
+	assertBigIntString(t, "b.g", b.g, "0")
+	assertBigIntString(t, "b.h", b.h, "1")
+}
+
+func TestWB_BinaryLFT_IngestRight_DoesNotMutateOriginal(t *testing.T) {
+	b := identityBinaryLFT()
+
+	_ = b.ingestRight(big.NewInt(1), big.NewInt(2))
+
+	assertBigIntString(t, "b.a", b.a, "1")
+	assertBigIntString(t, "b.b", b.b, "0")
+	assertBigIntString(t, "b.c", b.c, "0")
+	assertBigIntString(t, "b.d", b.d, "0")
+	assertBigIntString(t, "b.e", b.e, "0")
+	assertBigIntString(t, "b.f", b.f, "0")
+	assertBigIntString(t, "b.g", b.g, "0")
+	assertBigIntString(t, "b.h", b.h, "1")
+}
 
 // cf/source_wb_test.go v1

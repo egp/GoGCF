@@ -1,4 +1,4 @@
-// cf/lft.go v4
+// cf/lft.go v7
 package cf
 
 import "math/big"
@@ -79,4 +79,38 @@ func (s binaryStepState) choose() (binaryDecision, error) {
 	}
 }
 
-// cf/lft.go v4
+func (b binaryLFT) ingestLeft(p, q *big.Int) binaryLFT {
+	return binaryLFT{
+		a: addMul(b.a, q, b.b),
+		b: addMul(b.c, q, b.d),
+		c: mul(b.a, p),
+		d: mul(b.b, p),
+		e: addMul(b.e, q, b.f),
+		f: addMul(b.g, q, b.h),
+		g: mul(b.e, p),
+		h: mul(b.f, p),
+	}
+}
+
+func (b binaryLFT) ingestRight(p, q *big.Int) binaryLFT {
+	return binaryLFT{
+		a: addMul(b.a, q, b.b),
+		b: mul(b.a, p),
+		c: addMul(b.c, q, b.d),
+		d: mul(b.c, p),
+		e: addMul(b.e, q, b.f),
+		f: mul(b.e, p),
+		g: addMul(b.g, q, b.h),
+		h: mul(b.g, p),
+	}
+}
+
+func mul(x, y *big.Int) *big.Int {
+	return new(big.Int).Mul(x, y)
+}
+
+func addMul(x, y, z *big.Int) *big.Int {
+	return new(big.Int).Add(new(big.Int).Mul(x, y), z)
+}
+
+// cf/lft.go v7
