@@ -1,12 +1,13 @@
-// cf/binary.go v7
+// cf/binary.go v9
 package cf
 
 import "math/big"
 
 type binaryGCF struct {
-	op    binaryLFT
-	left  GCF
-	right GCF
+	op       binaryLFT
+	left     GCF
+	right    GCF
+	resolved GCF
 }
 
 func Add(x, y GCF) GCF {
@@ -42,11 +43,26 @@ func Div(x, y GCF) GCF {
 }
 
 func (g binaryGCF) Next() (RCFTerm, GCF, error) {
-	prefix, err := g.completeToPrefix()
+	resolved := g.resolved
+	if resolved == nil {
+		prefix, err := g.completeToPrefix()
+		if err != nil {
+			return RCFTerm{}, g, err
+		}
+		resolved = prefix
+	}
+
+	term, rest, err := resolved.Next()
 	if err != nil {
 		return RCFTerm{}, g, err
 	}
-	return prefix.Next()
+
+	return term, binaryGCF{
+		op:       g.op,
+		left:     g.left,
+		right:    g.right,
+		resolved: rest,
+	}, nil
 }
 
 func (g binaryGCF) Range() Range {
@@ -247,4 +263,4 @@ func divisionBinaryLFT() binaryLFT {
 	}
 }
 
-// cf/binary.go v7
+// cf/binary.go v9
