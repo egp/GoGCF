@@ -1,0 +1,39 @@
+Project: GoGCF, a Go library for exact continued-fraction arithmetic in the spirit of Gosper/HAKMEM, using immutable GCFSource input streams and immutable GCF evaluators.
+
+Current milestone: make the evaluator architecture real enough to head toward the target formula
+sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°)).
+
+Working components:
+- Core public types exist: PQTerm, RCFTerm, Rational, Bound, Range, GCFSource, GCF.
+- Immutable sources work: Int64, Rat64, Sqrt2.
+- FromSource pass-through evaluator works for RCF-compatible sources.
+- Take(n) and Convergent() work for finite RCF-prefix evaluators.
+- Rational-to-RCF prefix conversion works.
+- Internal ULFT/BLFT identity initializers exist.
+- Binary decision enum and choose() logic exist.
+- BLFT ingestLeft/ingestRight work.
+- EOF collapse works: BLFT -> ULFT -> Rational.
+- Private adapter from RCFTerm to PQTerm exists.
+- binaryGCF exists for Add/Sub/Mul/Div.
+- binaryGCF can ingest children, step, collapse to Rational, and emit correct exact-finite public results for current tested cases.
+
+Known failures / gaps:
+- binaryGCF.Next() currently works by complete-to-rational then emit-prefix, not true incremental certified emission.
+- Range() for arithmetic evaluators is still stubbed.
+- Compare is not implemented.
+- Unary evaluator shell does not exist yet.
+- Neg/Inv/sqrt/sin/tanh are not implemented.
+- Pi() and E() named sources are not implemented.
+- No end-to-end target formula yet.
+
+Next immediate task:
+- take the next larger step on the critical path: either improve binaryGCF toward true incremental certified emission, or start the unary evaluator path needed for sqrt/sin/tanh.
+
+Constraints / invariants:
+- Treat the most recently supplied version of a file as current source of truth until replaced; ignore obsolete older versions.
+- Prefer full-file replacements for small files; for larger files prefer full function replacements; append tests when practical.
+- Avoid tiny one-function files; split large files when appropriate (current threshold around 600 lines, adjustable).
+- BB tests: *_bb_test.go in package cf_test, names TestBB_*.
+- WB tests: *_wb_test.go in package cf, names TestWB_*.
+- Red/green phases should be separate, and red phases must still compile using valid-but-wrong behavior.
+- Commit messages should summarize the full substantive step completed since the last user “committed”.
