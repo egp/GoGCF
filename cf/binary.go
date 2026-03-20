@@ -247,7 +247,6 @@ func (g binaryGCF) emitStep() (RCFTerm, binaryGCF, error) {
 		right: g.right,
 	}, nil
 }
-
 func (g binaryGCF) step() (binaryDecision, binaryGCF, error) {
 	xr := g.left.Range()
 	yr := g.right.Range()
@@ -267,6 +266,26 @@ func (g binaryGCF) step() (binaryDecision, binaryGCF, error) {
 	canRight, err := canIngestFromChild(g.right)
 	if err != nil {
 		return 0, g, err
+	}
+
+	if !canEmitOutput && canLeft && canRight {
+		leftNext, err := g.ingestLeftStep()
+		if err != nil {
+			return 0, g, err
+		}
+		rightNext, err := g.ingestRightStep()
+		if err != nil {
+			return 0, g, err
+		}
+
+		switch leftNext.Range().Cmp(rightNext.Range()) {
+		case -1:
+			return decisionIngestLeft, leftNext, nil
+		case 1:
+			return decisionIngestRight, rightNext, nil
+		default:
+			return decisionIngestLeft, leftNext, nil
+		}
 	}
 
 	if !canEmitOutput && !canLeft && !canRight {

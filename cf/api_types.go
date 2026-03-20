@@ -116,6 +116,18 @@ type GCF interface {
 }
 
 func (r Range) Cmp(other Range) int {
+	rValid := rangeWellFormed(r)
+	otherValid := rangeWellFormed(other)
+
+	switch {
+	case rValid && !otherValid:
+		return -1
+	case !rValid && otherValid:
+		return 1
+	case !rValid && !otherValid:
+		return 0
+	}
+
 	if rangeEquivalent(r, other) {
 		return 0
 	}
@@ -258,13 +270,15 @@ func rationalToBigRat(r Rational) *big.Rat {
 		new(big.Int).Set(r.Den),
 	)
 }
-
 func boundEqual(a, b Bound) bool {
 	if a.Kind != b.Kind || a.Closed != b.Closed {
 		return false
 	}
 	if a.Kind != BoundFinite {
 		return true
+	}
+	if !rationalWellFormed(a.Value) || !rationalWellFormed(b.Value) {
+		return false
 	}
 	return rationalCmp(a.Value, b.Value) == 0
 }
@@ -299,8 +313,16 @@ func boundKindOrder(k BoundKind) int {
 		return 0
 	}
 }
-
 func rationalCmp(a, b Rational) int {
+	switch {
+	case rationalWellFormed(a) && !rationalWellFormed(b):
+		return 1
+	case !rationalWellFormed(a) && rationalWellFormed(b):
+		return -1
+	case !rationalWellFormed(a) && !rationalWellFormed(b):
+		return 0
+	}
+
 	left := new(big.Int).Mul(
 		new(big.Int).Set(a.Num),
 		new(big.Int).Set(b.Den),
@@ -310,6 +332,24 @@ func rationalCmp(a, b Rational) int {
 		new(big.Int).Set(a.Den),
 	)
 	return left.Cmp(right)
+}
+func rangeWellFormed(r Range) bool {
+	return boundWellFormed(r.Lo) && boundWellFormed(r.Hi)
+}
+
+func boundWellFormed(b Bound) bool {
+	switch b.Kind {
+	case BoundNegInf, BoundPosInf:
+		return true
+	case BoundFinite:
+		return rationalWellFormed(b.Value)
+	default:
+		return false
+	}
+}
+
+func rationalWellFormed(r Rational) bool {
+	return r.Num != nil && r.Den != nil && r.Den.Sign() != 0
 }
 
 // cf/api_types.go v3
