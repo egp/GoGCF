@@ -1,7 +1,10 @@
 // cf/lft_wb_test.go v1
 package cf
 
-import "testing"
+import (
+	"math/big"
+	"testing"
+)
 
 func TestWB_IdentityUnaryLFT_HasCoefficients_1_0_0_1(t *testing.T) {
 	u := identityUnaryLFT()
@@ -142,6 +145,120 @@ func TestWB_BinaryStepState_Choose_ReturnsErrStuckWhenNoPrimaryActionAvailable(t
 	if err != ErrStuck {
 		t.Fatalf("choose() error = %v, want %v", err, ErrStuck)
 	}
+}
+
+func TestWB_BinaryLFT_CollapseLeftEOF_Selects_AXplusB_Over_EXplusF(t *testing.T) {
+	b := binaryLFT{
+		a: big.NewInt(2),
+		b: big.NewInt(3),
+		c: big.NewInt(5),
+		d: big.NewInt(7),
+		e: big.NewInt(11),
+		f: big.NewInt(13),
+		g: big.NewInt(17),
+		h: big.NewInt(19),
+	}
+
+	u := b.collapseLeftEOF()
+
+	assertBigIntString(t, "u.a", u.a, "2")
+	assertBigIntString(t, "u.b", u.b, "3")
+	assertBigIntString(t, "u.c", u.c, "11")
+	assertBigIntString(t, "u.d", u.d, "13")
+}
+
+func TestWB_BinaryLFT_CollapseRightEOF_Selects_AXplusC_Over_EXplusG(t *testing.T) {
+	b := binaryLFT{
+		a: big.NewInt(2),
+		b: big.NewInt(3),
+		c: big.NewInt(5),
+		d: big.NewInt(7),
+		e: big.NewInt(11),
+		f: big.NewInt(13),
+		g: big.NewInt(17),
+		h: big.NewInt(19),
+	}
+
+	u := b.collapseRightEOF()
+
+	assertBigIntString(t, "u.a", u.a, "2")
+	assertBigIntString(t, "u.b", u.b, "5")
+	assertBigIntString(t, "u.c", u.c, "11")
+	assertBigIntString(t, "u.d", u.d, "17")
+}
+
+func TestWB_BinaryLFT_CollapseEOF_DoesNotMutateOriginal(t *testing.T) {
+	b := binaryLFT{
+		a: big.NewInt(2),
+		b: big.NewInt(3),
+		c: big.NewInt(5),
+		d: big.NewInt(7),
+		e: big.NewInt(11),
+		f: big.NewInt(13),
+		g: big.NewInt(17),
+		h: big.NewInt(19),
+	}
+
+	_ = b.collapseLeftEOF()
+	_ = b.collapseRightEOF()
+
+	assertBigIntString(t, "b.a", b.a, "2")
+	assertBigIntString(t, "b.b", b.b, "3")
+	assertBigIntString(t, "b.c", b.c, "5")
+	assertBigIntString(t, "b.d", b.d, "7")
+	assertBigIntString(t, "b.e", b.e, "11")
+	assertBigIntString(t, "b.f", b.f, "13")
+	assertBigIntString(t, "b.g", b.g, "17")
+	assertBigIntString(t, "b.h", b.h, "19")
+}
+
+func TestWB_UnaryLFT_CollapseEOFToRational_SevenOverFive(t *testing.T) {
+	u := unaryLFT{
+		a: big.NewInt(7),
+		b: big.NewInt(1),
+		c: big.NewInt(5),
+		d: big.NewInt(0),
+	}
+
+	r, err := u.collapseEOFToRational()
+	if err != nil {
+		t.Fatalf("collapseEOFToRational() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "7")
+	assertBigIntString(t, "r.Den", r.Den, "5")
+}
+
+func TestWB_UnaryLFT_CollapseEOFToRational_EightOverOne(t *testing.T) {
+	u := unaryLFT{
+		a: big.NewInt(8),
+		b: big.NewInt(5),
+		c: big.NewInt(1),
+		d: big.NewInt(0),
+	}
+
+	r, err := u.collapseEOFToRational()
+	if err != nil {
+		t.Fatalf("collapseEOFToRational() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "8")
+	assertBigIntString(t, "r.Den", r.Den, "1")
+}
+
+func TestWB_AddPath_AfterBothIngests_CollapseRightEOFThenUnaryEOF_GivesEight(t *testing.T) {
+	b := additionBinaryLFT()
+	b = b.ingestLeft(big.NewInt(1), big.NewInt(3))
+	b = b.ingestRight(big.NewInt(1), big.NewInt(5))
+
+	u := b.collapseRightEOF()
+	r, err := u.collapseEOFToRational()
+	if err != nil {
+		t.Fatalf("collapse path error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "8")
+	assertBigIntString(t, "r.Den", r.Den, "1")
 }
 
 // cf/lft_wb_test.go v1

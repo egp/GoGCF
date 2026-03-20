@@ -1,4 +1,4 @@
-// cf/lft.go v7
+// cf/lft.go v9
 package cf
 
 import "math/big"
@@ -105,6 +105,43 @@ func (b binaryLFT) ingestRight(p, q *big.Int) binaryLFT {
 	}
 }
 
+func (b binaryLFT) collapseLeftEOF() unaryLFT {
+	return unaryLFT{
+		a: new(big.Int).Set(b.a),
+		b: new(big.Int).Set(b.b),
+		c: new(big.Int).Set(b.e),
+		d: new(big.Int).Set(b.f),
+	}
+}
+
+func (b binaryLFT) collapseRightEOF() unaryLFT {
+	return unaryLFT{
+		a: new(big.Int).Set(b.a),
+		b: new(big.Int).Set(b.c),
+		c: new(big.Int).Set(b.e),
+		d: new(big.Int).Set(b.g),
+	}
+}
+
+func (u unaryLFT) collapseEOFToRational() (Rational, error) {
+	if u.c == nil || u.c.Sign() == 0 {
+		return Rational{}, ErrUndefined
+	}
+
+	num := new(big.Int).Set(u.a)
+	den := new(big.Int).Set(u.c)
+
+	if den.Sign() < 0 {
+		num.Neg(num)
+		den.Neg(den)
+	}
+
+	return Rational{
+		Num: num,
+		Den: den,
+	}, nil
+}
+
 func mul(x, y *big.Int) *big.Int {
 	return new(big.Int).Mul(x, y)
 }
@@ -113,4 +150,4 @@ func addMul(x, y, z *big.Int) *big.Int {
 	return new(big.Int).Add(new(big.Int).Mul(x, y), z)
 }
 
-// cf/lft.go v7
+// cf/lft.go v9
