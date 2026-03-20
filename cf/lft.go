@@ -81,12 +81,12 @@ func (s binaryStepState) choose() (binaryDecision, error) {
 
 func (b binaryLFT) ingestLeft(p, q *big.Int) binaryLFT {
 	return binaryLFT{
-		a: addMul(b.a, q, b.b),
-		b: addMul(b.c, q, b.d),
+		a: addMul(b.a, q, b.c),
+		b: addMul(b.b, q, b.d),
 		c: mul(b.a, p),
 		d: mul(b.b, p),
-		e: addMul(b.e, q, b.f),
-		f: addMul(b.g, q, b.h),
+		e: addMul(b.e, q, b.g),
+		f: addMul(b.f, q, b.h),
 		g: mul(b.e, p),
 		h: mul(b.f, p),
 	}
@@ -175,6 +175,7 @@ func mul(x, y *big.Int) *big.Int {
 func addMul(x, y, z *big.Int) *big.Int {
 	return new(big.Int).Add(new(big.Int).Mul(x, y), z)
 }
+
 func (b binaryLFT) evalAt(x, y Rational) (Rational, error) {
 	if b.a == nil || b.b == nil || b.c == nil || b.d == nil ||
 		b.e == nil || b.f == nil || b.g == nil || b.h == nil {
@@ -198,17 +199,17 @@ func (b binaryLFT) evalAt(x, y Rational) (Rational, error) {
 	xyNum := new(big.Int).Mul(new(big.Int).Set(xn), new(big.Int).Set(yn))
 	commonDen := new(big.Int).Mul(new(big.Int).Set(xd), new(big.Int).Set(yd))
 
-	yScaled := new(big.Int).Mul(new(big.Int).Set(yn), new(big.Int).Set(xd))
 	xScaled := new(big.Int).Mul(new(big.Int).Set(xn), new(big.Int).Set(yd))
+	yScaled := new(big.Int).Mul(new(big.Int).Set(yn), new(big.Int).Set(xd))
 
 	num := new(big.Int).Mul(new(big.Int).Set(b.a), xyNum)
-	num.Add(num, new(big.Int).Mul(new(big.Int).Set(b.b), yScaled))
-	num.Add(num, new(big.Int).Mul(new(big.Int).Set(b.c), xScaled))
+	num.Add(num, new(big.Int).Mul(new(big.Int).Set(b.b), xScaled))
+	num.Add(num, new(big.Int).Mul(new(big.Int).Set(b.c), yScaled))
 	num.Add(num, new(big.Int).Mul(new(big.Int).Set(b.d), commonDen))
 
 	den := new(big.Int).Mul(new(big.Int).Set(b.e), xyNum)
-	den.Add(den, new(big.Int).Mul(new(big.Int).Set(b.f), yScaled))
-	den.Add(den, new(big.Int).Mul(new(big.Int).Set(b.g), xScaled))
+	den.Add(den, new(big.Int).Mul(new(big.Int).Set(b.f), xScaled))
+	den.Add(den, new(big.Int).Mul(new(big.Int).Set(b.g), yScaled))
 	den.Add(den, new(big.Int).Mul(new(big.Int).Set(b.h), commonDen))
 
 	if den.Sign() == 0 {

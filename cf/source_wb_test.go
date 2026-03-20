@@ -223,7 +223,6 @@ func TestWB_BinaryLFT_IngestRight_IdentityWithPQ_1_2(t *testing.T) {
 	assertBigIntString(t, "got.g", got.g, "1")
 	assertBigIntString(t, "got.h", got.h, "0")
 }
-
 func TestWB_BinaryLFT_IngestLeft_NonTrivialCoefficients(t *testing.T) {
 	b := binaryLFT{
 		a: big.NewInt(2),
@@ -238,12 +237,12 @@ func TestWB_BinaryLFT_IngestLeft_NonTrivialCoefficients(t *testing.T) {
 
 	got := b.ingestLeft(big.NewInt(23), big.NewInt(29))
 
-	assertBigIntString(t, "got.a", got.a, "61")
-	assertBigIntString(t, "got.b", got.b, "152")
+	assertBigIntString(t, "got.a", got.a, "63")
+	assertBigIntString(t, "got.b", got.b, "94")
 	assertBigIntString(t, "got.c", got.c, "46")
 	assertBigIntString(t, "got.d", got.d, "69")
-	assertBigIntString(t, "got.e", got.e, "332")
-	assertBigIntString(t, "got.f", got.f, "512")
+	assertBigIntString(t, "got.e", got.e, "336")
+	assertBigIntString(t, "got.f", got.f, "396")
 	assertBigIntString(t, "got.g", got.g, "253")
 	assertBigIntString(t, "got.h", got.h, "299")
 }

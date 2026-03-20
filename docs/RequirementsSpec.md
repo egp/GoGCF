@@ -1,4 +1,3 @@
-<!-- RequirementsSpec.md v3 -->
 # RequirementsSpec.md
 
 # Continued Fraction Arithmetic Library Requirements Specification
@@ -325,6 +324,8 @@ A `Bound` shall represent:
 - exact value when finite
 - open or closed endpoint status
 
+Open and closed endpoint status is part of the mathematical meaning of the bound and shall be preserved explicitly rather than inferred indirectly.
+
 ### 10.2 Range Structure
 
 A `Range` shall contain:
@@ -333,11 +334,18 @@ A `Range` shall contain:
 - upper bound `Hi`
 - explicit boolean `Outside`
 
+A `Range` therefore represents either an inside interval or the complement of an interval, depending on `Outside`.
+
 ### 10.3 Inside / Outside Semantics
 
 A `Range` shall provide `IsInside()` and `IsOutside()` semantics derived from the explicit `Outside` flag.
 
 Outside-ness shall not be encoded indirectly by swapping bound order.
+
+The intended allowed-set semantics are:
+
+- if `Outside == false`, the value is constrained to lie inside the interval described by `Lo` and `Hi`
+- if `Outside == true`, the value is constrained to lie outside that interval
 
 ### 10.4 Exactness
 
@@ -353,15 +361,35 @@ A range is exact if and only if it denotes a single exact value.
 
 `Range` shall define a comparison relation suitable for choosing among competing uncertainty descriptions.
 
-The ordering shall be:
+The comparison shall prefer:
 
 1. exact
 2. inside narrow
 3. inside wide
-4. outside narrow
-5. outside wide
+4. outside wide
+5. outside narrow
 
-For ranges of the same class, narrower finite span is better than wider finite span, and any finite span is narrower than an infinite span.
+For ranges of the same class:
+
+- for inside ranges, narrower finite span is better than wider finite span
+- for outside ranges, wider excluded finite span is better than narrower excluded finite span
+- any finite span comparison shall be preferred over an infinite span comparison when both belong to the same class
+
+### 10.7 Comparison Semantics
+
+`Range` comparison shall not be purely class-based.
+
+When comparing two ranges, the implementation shall first prefer the range whose allowed set is a proper subset of the other range's allowed set.
+
+Only when the two ranges are not ordered by allowed-set containment shall the implementation fall back to the class-and-width ordering defined above.
+
+This rule shall allow range refinement to flip between inside and outside when the new allowed set is strictly more informative.
+
+### 10.8 Endpoint and Inclusion Semantics
+
+Open and closed endpoints shall matter when determining exactness, containment, and disjointness.
+
+A half-open or open interval with coincident finite endpoints is not exact.
 
 ---
 
@@ -508,7 +536,33 @@ Nothing else is a primary binary evaluation action.
 
 This decision machine shall be explicit in the implementation and testable through white-box tests.
 
-### 13.9 Degenerate States
+The intended decision method is:
+
+1. obtain the current certified operand ranges for the left and right child evaluators
+2. propagate those ranges through the current `BinaryLFT` to obtain a certified output range for the current transform state
+3. emit if and only if that propagated output range certifies a single next RCF term
+4. otherwise evaluate the predicted output range after ingest-from-left and after ingest-from-right, and choose the ingest whose resulting output range is better according to `Range` comparison
+5. if neither emit nor legal ingest is currently possible, report the appropriate blocked, stuck, or undefined condition
+
+### 13.9 Output-Range Propagation
+
+The implementation shall support propagation of operand uncertainty through a `BinaryLFT`.
+
+At minimum, the design shall account for evaluating the transform on the four corners induced by operand range endpoints.
+
+Evaluating the four corners yields four candidate corner values for the transform; these are then used to construct one certified output range for the transform state.
+
+The implementation shall compare candidate output ranges for whole candidate states, not compare individual corners directly.
+
+### 13.10 Safety of Corner Evaluation
+
+Corner-based propagation is valid only when it is mathematically safe over the operand rectangle.
+
+The implementation shall explicitly account for denominator sign changes, singularities, and other cases where naive corner-only enclosure would be unsound.
+
+When safety cannot be certified, the implementation shall return a weaker but valid range, delay emission, or ingest more input rather than claim a stronger result than has been justified.
+
+### 13.11 Degenerate States
 
 The implementation shall define behavior for singular, degenerate, or otherwise undefined transform states.
 
@@ -550,6 +604,8 @@ The library shall be able to produce convergents from finite evaluators, especia
 
 The library shall be able to report current certified `Range` information.
 
+This range information may arise from exact finite state, propagated operand uncertainty, or other mathematically justified certification machinery.
+
 ### 14.7 Future Digit / Radix Output
 
 Emission of decimal digits or digits in other radices is a long-term goal and shall remain architecturally feasible.
@@ -561,6 +617,8 @@ Emission of decimal digits or digits in other radices is a long-term goal and sh
 ### 15.1 Term Correctness
 
 Every emitted RCF term shall be mathematically justified by the already-consumed operand information and the valid unread-tail assumptions defined by the model.
+
+Such justification may come from exact finite collapse, transform-state reasoning, propagated operand ranges, or any other exact certification rule consistent with this specification.
 
 ### 15.2 Finite Input Correctness
 
@@ -895,9 +953,12 @@ The specification shall support staged delivery.
 - exact unary arithmetic substrate
 - finite-by-exhaustion correctness
 - stronger progress diagnostics
+- initial certified range semantics and comparison
 
 ### 25.4 Phase 4
 
+- propagated range behavior for arithmetic evaluators
+- range-driven binary decision logic
 - specialized constant generators including `pi` and `e`
 - named infinite `sqrt(2)` source
 - target-formula unary operators: `sqrt`, `sin`, `tanh`
@@ -905,7 +966,7 @@ The specification shall support staged delivery.
 
 ### 25.5 Phase 5
 
-- improved certification and range behavior
+- improved certification and broader range behavior
 - bounded rational-collapse unary operator
 - decimal/radix emission
 - broader unary and transcendental support
@@ -940,28 +1001,3 @@ A major milestone shall be considered complete when the library can compute the 
 \]
 
 with exact continued-fraction machinery, using named constant generators and the required unary and binary operators, without silently degrading to floating-point arithmetic.
-
----
-
-## 28. Placeholder Appendices
-
-### Appendix A: Mathematical Conventions
-
-TBD
-
-### Appendix B: Canonical Examples
-
-TBD
-
-### Appendix C: Error Taxonomy
-
-TBD
-
-### Appendix D: Public API Sketch
-
-TBD
-
-### Appendix E: Test Matrix
-
-TBD
-<!-- RequirementsSpec.md v3 -->

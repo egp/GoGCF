@@ -337,8 +337,8 @@ func additionBinaryLFT() binaryLFT {
 func subtractionBinaryLFT() binaryLFT {
 	return binaryLFT{
 		a: big.NewInt(0),
-		b: big.NewInt(-1),
-		c: big.NewInt(1),
+		b: big.NewInt(1),
+		c: big.NewInt(-1),
 		d: big.NewInt(0),
 		e: big.NewInt(0),
 		f: big.NewInt(0),
@@ -363,12 +363,12 @@ func multiplicationBinaryLFT() binaryLFT {
 func divisionBinaryLFT() binaryLFT {
 	return binaryLFT{
 		a: big.NewInt(0),
-		b: big.NewInt(0),
-		c: big.NewInt(1),
+		b: big.NewInt(1),
+		c: big.NewInt(0),
 		d: big.NewInt(0),
 		e: big.NewInt(0),
-		f: big.NewInt(1),
-		g: big.NewInt(0),
+		f: big.NewInt(0),
+		g: big.NewInt(1),
 		h: big.NewInt(0),
 	}
 }

@@ -449,4 +449,52 @@ func TestWB_BinaryLFT_RangeFromXYRanges_ExactPoints_DivFiveByTwelve_GivesExactFi
 	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "12")
 }
 
+func TestWB_BinaryLFT_EvalAt_LinearXTermUsesB(t *testing.T) {
+	b := binaryLFT{
+		a: big.NewInt(0),
+		b: big.NewInt(1),
+		c: big.NewInt(0),
+		d: big.NewInt(0),
+		e: big.NewInt(0),
+		f: big.NewInt(0),
+		g: big.NewInt(0),
+		h: big.NewInt(1),
+	}
+
+	r, err := b.evalAt(
+		Rational{Num: big.NewInt(5), Den: big.NewInt(1)},
+		Rational{Num: big.NewInt(12), Den: big.NewInt(1)},
+	)
+	if err != nil {
+		t.Fatalf("evalAt() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "5")
+	assertBigIntString(t, "r.Den", r.Den, "1")
+}
+
+func TestWB_BinaryLFT_EvalAt_LinearYTermUsesC(t *testing.T) {
+	b := binaryLFT{
+		a: big.NewInt(0),
+		b: big.NewInt(0),
+		c: big.NewInt(1),
+		d: big.NewInt(0),
+		e: big.NewInt(0),
+		f: big.NewInt(0),
+		g: big.NewInt(0),
+		h: big.NewInt(1),
+	}
+
+	r, err := b.evalAt(
+		Rational{Num: big.NewInt(5), Den: big.NewInt(1)},
+		Rational{Num: big.NewInt(12), Den: big.NewInt(1)},
+	)
+	if err != nil {
+		t.Fatalf("evalAt() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "12")
+	assertBigIntString(t, "r.Den", r.Den, "1")
+}
+
 // cf/lft_wb_test.go v1
