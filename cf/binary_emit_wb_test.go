@@ -77,5 +77,21 @@ func TestWB_BinaryGCF_Step_ChoosesEmitFromPropagatedRangeWhenIntegerPartIsCertif
 		t.Fatalf("step() action = %v, want %v", action, decisionEmitOutput)
 	}
 }
+func TestWB_BinaryGCF_Step_ChoosesEmitFromPropagatedRange_ForThreePlusSqrt2(t *testing.T) {
+	g := Add(FromSource(Int64(3)), FromSource(Sqrt2()))
+
+	bg, ok := g.(binaryGCF)
+	if !ok {
+		t.Fatalf("Add() concrete type = %T, want binaryGCF", g)
+	}
+
+	action, _, err := bg.step()
+	if err != nil {
+		t.Fatalf("step() error: %v", err)
+	}
+	if action != decisionEmitOutput {
+		t.Fatalf("step() action = %v, want %v", action, decisionEmitOutput)
+	}
+}
 
 // cf/binary_emit_wb_test.go v1

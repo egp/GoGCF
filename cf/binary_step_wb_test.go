@@ -1,14 +1,27 @@
-// cf/binary_step_wb_test.go v1
+// cf/binary_step_wb_test.go v2
 package cf
 
-import "testing"
+import (
+	"math/big"
+	"testing"
+)
 
-func TestWB_BinaryGCF_Step_PrefersLeftWhenBothChildrenCanIngestAndNoEmitIsCertified(t *testing.T) {
-	g := Add(FromSource(Int64(3)), FromSource(Sqrt2()))
+func TestWB_BinaryGCF_Step_PrefersLeftWhenBothChildrenCanIngestAndPredictedRangesAreEquallyUnknown(t *testing.T) {
+	x := scriptedRangeGCF{
+		term: RCFTerm{Kind: RCFValue, Value: big.NewInt(1)},
+		rest: FromSource(Int64(9)),
+		r:    Range{},
+	}
+	y := scriptedRangeGCF{
+		term: RCFTerm{Kind: RCFValue, Value: big.NewInt(1)},
+		rest: FromSource(Int64(8)),
+		r:    Range{},
+	}
 
-	bg, ok := g.(binaryGCF)
-	if !ok {
-		t.Fatalf("Add() concrete type = %T, want binaryGCF", g)
+	bg := binaryGCF{
+		op:    additionBinaryLFT(),
+		left:  x,
+		right: y,
 	}
 
 	action, next, err := bg.step()
@@ -20,39 +33,42 @@ func TestWB_BinaryGCF_Step_PrefersLeftWhenBothChildrenCanIngestAndNoEmitIsCertif
 	}
 
 	assertBigIntString(t, "op.a", next.op.a, "1")
-	assertBigIntString(t, "op.b", next.op.b, "3")
+	assertBigIntString(t, "op.b", next.op.b, "1")
 	assertBigIntString(t, "op.c", next.op.c, "0")
 	assertBigIntString(t, "op.d", next.op.d, "1")
 }
+
 func TestWB_BinaryGCF_Step_ChoosesRightWhenLeftIsExhaustedAndNoEmitIsCertified(t *testing.T) {
-	g := Add(FromSource(Int64(3)), FromSource(Sqrt2()))
-
-	bg, ok := g.(binaryGCF)
-	if !ok {
-		t.Fatalf("Add() concrete type = %T, want binaryGCF", g)
+	x := scriptedRangeGCF{
+		term: RCFTerm{Kind: RCFEOF},
+		r:    Range{},
+	}
+	y := scriptedRangeGCF{
+		term: RCFTerm{Kind: RCFValue, Value: big.NewInt(1)},
+		rest: FromSource(Int64(8)),
+		r:    Range{},
 	}
 
-	_, next1, err := bg.step()
+	bg := binaryGCF{
+		op:    additionBinaryLFT(),
+		left:  x,
+		right: y,
+	}
+
+	action, next, err := bg.step()
 	if err != nil {
-		t.Fatalf("first step() error: %v", err)
+		t.Fatalf("step() error: %v", err)
+	}
+	if action != decisionIngestRight {
+		t.Fatalf("step() action = %v, want %v", action, decisionIngestRight)
 	}
 
-	action2, next2, err := next1.step()
-	if err != nil {
-		t.Fatalf("second step() error: %v", err)
-	}
-	if action2 != decisionIngestRight {
-		t.Fatalf("second step() action = %v, want %v", action2, decisionIngestRight)
-	}
-
-	rightTerm, _, err := next2.right.Next()
-	if err != nil {
-		t.Fatalf("next2.right.Next() error: %v", err)
-	}
-	if !rightTerm.IsValue() {
-		t.Fatalf("right child should still be a value-producing stream after right-ingest step")
-	}
+	assertBigIntString(t, "op.a", next.op.a, "1")
+	assertBigIntString(t, "op.b", next.op.b, "0")
+	assertBigIntString(t, "op.c", next.op.c, "1")
+	assertBigIntString(t, "op.d", next.op.d, "1")
 }
+
 func TestWB_BinaryGCF_Step_ChoosesEmitWhenNeitherChildCanIngestAndExactEmitIsAvailable(t *testing.T) {
 	g := Add(FromSource(Int64(3)), FromSource(Int64(5)))
 
@@ -114,5 +130,3 @@ func TestWB_BinaryGCF_Step_DoesNotMutateOriginalNode(t *testing.T) {
 	assertBigIntString(t, "op.c", bg.op.c, "1")
 	assertBigIntString(t, "op.d", bg.op.d, "0")
 }
-
-// cf/binary_step_wb_test.go v1

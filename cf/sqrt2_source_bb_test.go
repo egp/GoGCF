@@ -115,5 +115,89 @@ func TestBB_Sqrt2_SecondAndThirdTermsArePQ_1_2(t *testing.T) {
 		t.Fatalf("third sqrt2 Q = %s, want %s", got, want)
 	}
 }
+func TestBB_FromSource_Sqrt2_RangeIsInsideOpen_OneToThreeHalves(t *testing.T) {
+	g := cf.FromSource(cf.Sqrt2())
+
+	r := g.Range()
+
+	if !r.IsInside() {
+		t.Fatalf("sqrt2 range should be inside")
+	}
+	if r.IsOutside() {
+		t.Fatalf("sqrt2 range should not be outside")
+	}
+	if r.IsExact() {
+		t.Fatalf("sqrt2 range should not be exact")
+	}
+	if r.Lo.Kind != cf.BoundFinite || r.Hi.Kind != cf.BoundFinite {
+		t.Fatalf("sqrt2 range should have finite bounds")
+	}
+	if r.Lo.Closed || r.Hi.Closed {
+		t.Fatalf("sqrt2 initial bounds should be open")
+	}
+
+	if got, want := r.Lo.Value.Num.String(), "1"; got != want {
+		t.Fatalf("lo numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Lo.Value.Den.String(), "1"; got != want {
+		t.Fatalf("lo denominator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Num.String(), "3"; got != want {
+		t.Fatalf("hi numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Den.String(), "2"; got != want {
+		t.Fatalf("hi denominator = %s, want %s", got, want)
+	}
+}
+
+func TestBB_FromSource_Sqrt2_RangeAfterOneNext_IsInsideOpen_TwoToFiveHalves(t *testing.T) {
+	g := cf.FromSource(cf.Sqrt2())
+
+	term, rest, err := g.Next()
+	if err != nil {
+		t.Fatalf("first Next() error: %v", err)
+	}
+	if !term.IsValue() {
+		t.Fatalf("first term should be a value")
+	}
+	value, ok := term.BigInt()
+	if !ok {
+		t.Fatalf("first term should expose a BigInt")
+	}
+	if got, want := value.String(), "1"; got != want {
+		t.Fatalf("first term = %s, want %s", got, want)
+	}
+
+	r := rest.Range()
+
+	if !r.IsInside() {
+		t.Fatalf("remainder sqrt2-tail range should be inside")
+	}
+	if r.IsOutside() {
+		t.Fatalf("remainder sqrt2-tail range should not be outside")
+	}
+	if r.IsExact() {
+		t.Fatalf("remainder sqrt2-tail range should not be exact")
+	}
+	if r.Lo.Kind != cf.BoundFinite || r.Hi.Kind != cf.BoundFinite {
+		t.Fatalf("remainder sqrt2-tail range should have finite bounds")
+	}
+	if r.Lo.Closed || r.Hi.Closed {
+		t.Fatalf("remainder sqrt2-tail bounds should be open")
+	}
+
+	if got, want := r.Lo.Value.Num.String(), "2"; got != want {
+		t.Fatalf("lo numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Lo.Value.Den.String(), "1"; got != want {
+		t.Fatalf("lo denominator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Num.String(), "5"; got != want {
+		t.Fatalf("hi numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Hi.Value.Den.String(), "2"; got != want {
+		t.Fatalf("hi denominator = %s, want %s", got, want)
+	}
+}
 
 // cf/sqrt2_source_bb_test.go v1

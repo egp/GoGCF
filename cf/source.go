@@ -103,7 +103,6 @@ func (g sourceBackedGCF) Next() (RCFTerm, GCF, error) {
 		Value: new(big.Int).Set(pq.Q),
 	}, sourceBackedGCF{src: rest}, nil
 }
-
 func (g sourceBackedGCF) Range() Range {
 	switch src := g.src.(type) {
 	case int64Source:
@@ -120,6 +119,50 @@ func (g sourceBackedGCF) Range() Range {
 			r, err := prefix.Convergent()
 			if err == nil {
 				return exactRangeFromRational(r)
+			}
+		}
+
+	case sqrt2Source:
+		switch src.index {
+		case 0:
+			return Range{
+				Lo: Bound{
+					Kind: BoundFinite,
+					Value: Rational{
+						Num: big.NewInt(1),
+						Den: big.NewInt(1),
+					},
+					Closed: false,
+				},
+				Hi: Bound{
+					Kind: BoundFinite,
+					Value: Rational{
+						Num: big.NewInt(3),
+						Den: big.NewInt(2),
+					},
+					Closed: false,
+				},
+				Outside: false,
+			}
+		default:
+			return Range{
+				Lo: Bound{
+					Kind: BoundFinite,
+					Value: Rational{
+						Num: big.NewInt(2),
+						Den: big.NewInt(1),
+					},
+					Closed: false,
+				},
+				Hi: Bound{
+					Kind: BoundFinite,
+					Value: Rational{
+						Num: big.NewInt(5),
+						Den: big.NewInt(2),
+					},
+					Closed: false,
+				},
+				Outside: false,
 			}
 		}
 	}

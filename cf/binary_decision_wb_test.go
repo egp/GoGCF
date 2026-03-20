@@ -35,13 +35,15 @@ func (g scriptedRangeGCF) Convergent() (Rational, error) {
 }
 
 func TestWB_BinaryGCF_Step_ChoosesIngestXWhenPredictedOutputRangeIsBetter(t *testing.T) {
-	xNow := finiteClosedInsideRange(
+	xNow := finiteInsideRange(
 		Rational{Num: big.NewInt(1), Den: big.NewInt(1)},
 		Rational{Num: big.NewInt(3), Den: big.NewInt(1)},
+		true,
 	)
-	yNow := finiteClosedInsideRange(
+	yNow := finiteInsideRange(
 		Rational{Num: big.NewInt(10), Den: big.NewInt(1)},
 		Rational{Num: big.NewInt(20), Den: big.NewInt(1)},
+		true,
 	)
 
 	x := scriptedRangeGCF{
@@ -87,13 +89,15 @@ func TestWB_BinaryGCF_Step_ChoosesIngestXWhenPredictedOutputRangeIsBetter(t *tes
 }
 
 func TestWB_BinaryGCF_Step_ChoosesIngestYWhenPredictedOutputRangeIsBetter(t *testing.T) {
-	xNow := finiteClosedInsideRange(
+	xNow := finiteInsideRange(
 		Rational{Num: big.NewInt(10), Den: big.NewInt(1)},
 		Rational{Num: big.NewInt(20), Den: big.NewInt(1)},
+		true,
 	)
-	yNow := finiteClosedInsideRange(
+	yNow := finiteInsideRange(
 		Rational{Num: big.NewInt(1), Den: big.NewInt(1)},
 		Rational{Num: big.NewInt(3), Den: big.NewInt(1)},
+		true,
 	)
 
 	x := scriptedRangeGCF{

@@ -221,6 +221,7 @@ func (b binaryLFT) evalAt(x, y Rational) (Rational, error) {
 		Den: den,
 	})
 }
+
 func (b binaryLFT) rangeFromXYRanges(xr, yr Range) (Range, error) {
 	x, xExact := exactFiniteRangeValue(xr)
 	y, yExact := exactFiniteRangeValue(yr)
@@ -232,8 +233,8 @@ func (b binaryLFT) rangeFromXYRanges(xr, yr Range) (Range, error) {
 		return exactRangeFromRational(z), nil
 	}
 
-	xLo, xHi, xOK := finiteClosedInsideRangeEndpoints(xr)
-	yLo, yHi, yOK := finiteClosedInsideRangeEndpoints(yr)
+	xLo, xHi, xOK := finiteInsideRangeEndpoints(xr)
+	yLo, yHi, yOK := finiteInsideRangeEndpoints(yr)
 	if !xOK || !yOK {
 		return Range{}, nil
 	}
@@ -265,8 +266,10 @@ func (b binaryLFT) rangeFromXYRanges(xr, yr Range) (Range, error) {
 		}
 	}
 
-	return finiteClosedInsideRange(lo, hi), nil
+	allClosed := xr.Lo.Closed && xr.Hi.Closed && yr.Lo.Closed && yr.Hi.Closed
+	return finiteInsideRange(lo, hi, allClosed), nil
 }
+
 func normalizedRational(r Rational) (Rational, error) {
 	if r.Num == nil || r.Den == nil || r.Den.Sign() == 0 {
 		return Rational{}, ErrUndefined
@@ -324,10 +327,14 @@ func exactRangeFromRational(r Rational) Range {
 		Outside: false,
 	}
 }
+
 func (b binaryLFT) emitCandidateFromRanges(xr, yr Range) (*big.Int, bool, error) {
 	zr, err := b.rangeFromXYRanges(xr, yr)
 	if err != nil {
 		return nil, false, err
+	}
+	if !rangeWellFormed(zr) {
+		return nil, false, nil
 	}
 	if zr.Outside {
 		return nil, false, nil
@@ -335,7 +342,7 @@ func (b binaryLFT) emitCandidateFromRanges(xr, yr Range) (*big.Int, bool, error)
 	if zr.Lo.Kind != BoundFinite || zr.Hi.Kind != BoundFinite {
 		return nil, false, nil
 	}
-	if !zr.Lo.Closed || !zr.Hi.Closed {
+	if !rationalWellFormed(zr.Lo.Value) || !rationalWellFormed(zr.Hi.Value) {
 		return nil, false, nil
 	}
 
@@ -349,7 +356,11 @@ func (b binaryLFT) emitCandidateFromRanges(xr, yr Range) (*big.Int, bool, error)
 	}
 
 	qLo, _ := floorDivModBig(lo.Num, lo.Den)
-	qHi, _ := floorDivModBig(hi.Num, hi.Den)
+	qHi, hiRem := floorDivModBig(hi.Num, hi.Den)
+	if !zr.Hi.Closed && hiRem.Sign() == 0 {
+		qHi.Sub(qHi, big.NewInt(1))
+	}
+
 	if qLo.Cmp(qHi) != 0 {
 		return nil, false, nil
 	}
@@ -357,14 +368,11 @@ func (b binaryLFT) emitCandidateFromRanges(xr, yr Range) (*big.Int, bool, error)
 	return qLo, true, nil
 }
 
-func finiteClosedInsideRangeEndpoints(r Range) (Rational, Rational, bool) {
+func finiteInsideRangeEndpoints(r Range) (Rational, Rational, bool) {
 	if r.Outside {
 		return Rational{}, Rational{}, false
 	}
 	if r.Lo.Kind != BoundFinite || r.Hi.Kind != BoundFinite {
-		return Rational{}, Rational{}, false
-	}
-	if !r.Lo.Closed || !r.Hi.Closed {
 		return Rational{}, Rational{}, false
 	}
 
@@ -379,7 +387,7 @@ func finiteClosedInsideRangeEndpoints(r Range) (Rational, Rational, bool) {
 	return lo, hi, true
 }
 
-func finiteClosedInsideRange(lo, hi Rational) Range {
+func finiteInsideRange(lo, hi Rational, closed bool) Range {
 	loN, err := normalizedRational(lo)
 	if err != nil {
 		return Range{}
@@ -393,12 +401,12 @@ func finiteClosedInsideRange(lo, hi Rational) Range {
 		Lo: Bound{
 			Kind:   BoundFinite,
 			Value:  loN,
-			Closed: true,
+			Closed: closed,
 		},
 		Hi: Bound{
 			Kind:   BoundFinite,
 			Value:  hiN,
-			Closed: true,
+			Closed: closed,
 		},
 		Outside: false,
 	}
