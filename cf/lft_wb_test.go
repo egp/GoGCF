@@ -668,4 +668,135 @@ func TestWB_DiagLFT_EvalAt_AdditionDiagonal_ThreeGivesSix(t *testing.T) {
 	assertBigIntString(t, "r.Den", r.Den, "1")
 }
 
+func TestWB_DiagLFT_Emit_IdentityFirstDigitTwo_LeavesOneOverXMinusTwo(t *testing.T) {
+	d := identityDiagLFT()
+
+	next := d.emit(big.NewInt(2))
+
+	r, err := next.evalAt(Rational{
+		Num: big.NewInt(12),
+		Den: big.NewInt(5),
+	})
+	if err != nil {
+		t.Fatalf("evalAt() error: %v", err)
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "5")
+	assertBigIntString(t, "r.Den", r.Den, "2")
+}
+
+func TestWB_DiagLFT_RangeFromXRange_Identity_ExactFiveOverTwo(t *testing.T) {
+	d := identityDiagLFT()
+
+	xr := Range{
+		Lo: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(5),
+				Den: big.NewInt(2),
+			},
+			Closed: true,
+		},
+		Hi: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(5),
+				Den: big.NewInt(2),
+			},
+			Closed: true,
+		},
+		Outside: false,
+	}
+
+	zr, err := d.rangeFromXRange(xr)
+	if err != nil {
+		t.Fatalf("rangeFromXRange() error: %v", err)
+	}
+	if !zr.IsExact() {
+		t.Fatalf("rangeFromXRange() should return an exact point")
+	}
+
+	assertBigIntString(t, "zr.Lo.Value.Num", zr.Lo.Value.Num, "5")
+	assertBigIntString(t, "zr.Lo.Value.Den", zr.Lo.Value.Den, "2")
+	assertBigIntString(t, "zr.Hi.Value.Num", zr.Hi.Value.Num, "5")
+	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "2")
+}
+
+func TestWB_DiagLFT_RangeFromXRange_Identity_FiniteClosedInterval(t *testing.T) {
+	d := identityDiagLFT()
+
+	xr := Range{
+		Lo: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(2),
+				Den: big.NewInt(1),
+			},
+			Closed: true,
+		},
+		Hi: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(5),
+				Den: big.NewInt(2),
+			},
+			Closed: true,
+		},
+		Outside: false,
+	}
+
+	zr, err := d.rangeFromXRange(xr)
+	if err != nil {
+		t.Fatalf("rangeFromXRange() error: %v", err)
+	}
+	if zr.IsExact() {
+		t.Fatalf("rangeFromXRange() should not be exact")
+	}
+	if zr.Outside {
+		t.Fatalf("rangeFromXRange() should return an inside range")
+	}
+
+	assertBigIntString(t, "zr.Lo.Value.Num", zr.Lo.Value.Num, "2")
+	assertBigIntString(t, "zr.Lo.Value.Den", zr.Lo.Value.Den, "1")
+	assertBigIntString(t, "zr.Hi.Value.Num", zr.Hi.Value.Num, "5")
+	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "2")
+	if !zr.Lo.Closed || !zr.Hi.Closed {
+		t.Fatalf("finite closed interval should stay closed")
+	}
+}
+
+func TestWB_DiagLFT_EmitCandidateFromRange_Identity_OpenFiveHalvesToThree_CertifiesTwo(t *testing.T) {
+	d := identityDiagLFT()
+
+	xr := Range{
+		Lo: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(5),
+				Den: big.NewInt(2),
+			},
+			Closed: false,
+		},
+		Hi: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(3),
+				Den: big.NewInt(1),
+			},
+			Closed: false,
+		},
+		Outside: false,
+	}
+
+	q, ok, err := d.emitCandidateFromRange(xr)
+	if err != nil {
+		t.Fatalf("emitCandidateFromRange() error: %v", err)
+	}
+	if !ok {
+		t.Fatalf("emitCandidateFromRange() should certify an output term")
+	}
+
+	assertBigIntString(t, "q", q, "2")
+}
+
 // cf/lft_wb_test.go v1

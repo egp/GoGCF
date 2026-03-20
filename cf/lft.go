@@ -483,4 +483,102 @@ func (b binaryLFT) diagonal() diagLFT {
 	}
 }
 
+func (d diagLFT) emit(term *big.Int) diagLFT {
+	if term == nil {
+		return d
+	}
+
+	return diagLFT{
+		a: new(big.Int).Set(d.d),
+		b: new(big.Int).Set(d.e),
+		c: new(big.Int).Set(d.f),
+		d: new(big.Int).Sub(new(big.Int).Set(d.a), new(big.Int).Mul(new(big.Int).Set(term), d.d)),
+		e: new(big.Int).Sub(new(big.Int).Set(d.b), new(big.Int).Mul(new(big.Int).Set(term), d.e)),
+		f: new(big.Int).Sub(new(big.Int).Set(d.c), new(big.Int).Mul(new(big.Int).Set(term), d.f)),
+	}
+}
+
+func (d diagLFT) rangeFromXRange(xr Range) (Range, error) {
+	x, exact := exactFiniteRangeValue(xr)
+	if exact {
+		z, err := d.evalAt(x)
+		if err != nil {
+			return Range{}, err
+		}
+		return exactRangeFromRational(z), nil
+	}
+
+	xLo, xHi, ok := finiteInsideRangeEndpoints(xr)
+	if !ok {
+		return Range{}, nil
+	}
+
+	values := make([]Rational, 0, 2)
+	for _, x := range []Rational{xLo, xHi} {
+		v, err := d.evalAt(x)
+		if err != nil {
+			continue
+		}
+		values = append(values, v)
+	}
+
+	if len(values) == 0 {
+		return Range{}, nil
+	}
+
+	lo := values[0]
+	hi := values[0]
+	for _, v := range values[1:] {
+		if rationalCmp(v, lo) < 0 {
+			lo = v
+		}
+		if rationalCmp(v, hi) > 0 {
+			hi = v
+		}
+	}
+
+	allClosed := xr.Lo.Closed && xr.Hi.Closed
+	return finiteInsideRange(lo, hi, allClosed), nil
+}
+
+func (d diagLFT) emitCandidateFromRange(xr Range) (*big.Int, bool, error) {
+	zr, err := d.rangeFromXRange(xr)
+	if err != nil {
+		return nil, false, err
+	}
+	if !rangeWellFormed(zr) {
+		return nil, false, nil
+	}
+	if zr.Outside {
+		return nil, false, nil
+	}
+	if zr.Lo.Kind != BoundFinite || zr.Hi.Kind != BoundFinite {
+		return nil, false, nil
+	}
+	if !rationalWellFormed(zr.Lo.Value) || !rationalWellFormed(zr.Hi.Value) {
+		return nil, false, nil
+	}
+
+	lo, err := normalizedRational(zr.Lo.Value)
+	if err != nil {
+		return nil, false, err
+	}
+	hi, err := normalizedRational(zr.Hi.Value)
+	if err != nil {
+		return nil, false, err
+	}
+
+	qLo, _ := floorDivModBig(lo.Num, lo.Den)
+	qHi, hiRem := floorDivModBig(hi.Num, hi.Den)
+	if !zr.Hi.Closed && hiRem.Sign() == 0 {
+		qHi.Sub(qHi, big.NewInt(1))
+	}
+
+	if qLo.Cmp(qHi) != 0 {
+		return nil, false, nil
+	}
+
+	return qLo, true, nil
+}
+
 // cf/lft.go v10
