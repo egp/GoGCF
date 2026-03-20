@@ -1,4 +1,4 @@
-// cf/binary.go v2
+// cf/binary.go v4
 package cf
 
 import "math/big"
@@ -114,6 +114,54 @@ func (g binaryGCF) ingestRightStep() (binaryGCF, error) {
 	}, nil
 }
 
+func (g binaryGCF) step() (binaryDecision, binaryGCF, error) {
+	canLeft, err := canIngestFromChild(g.left)
+	if err != nil {
+		return 0, g, err
+	}
+
+	canRight, err := canIngestFromChild(g.right)
+	if err != nil {
+		return 0, g, err
+	}
+
+	state := binaryStepState{
+		canEmitOutput:  false,
+		canIngestLeft:  canLeft,
+		canIngestRight: canRight,
+	}
+
+	action, err := state.choose()
+	if err != nil {
+		return 0, g, err
+	}
+
+	switch action {
+	case decisionIngestLeft:
+		next, err := g.ingestLeftStep()
+		if err != nil {
+			return 0, g, err
+		}
+		return decisionIngestLeft, next, nil
+	case decisionIngestRight:
+		next, err := g.ingestRightStep()
+		if err != nil {
+			return 0, g, err
+		}
+		return decisionIngestRight, next, nil
+	default:
+		return 0, g, ErrStuck
+	}
+}
+
+func canIngestFromChild(child GCF) (bool, error) {
+	term, _, err := child.Next()
+	if err != nil {
+		return false, err
+	}
+	return !term.IsEOF(), nil
+}
+
 func additionBinaryLFT() binaryLFT {
 	return binaryLFT{
 		a: big.NewInt(0),
@@ -166,4 +214,4 @@ func divisionBinaryLFT() binaryLFT {
 	}
 }
 
-// cf/binary.go v2
+// cf/binary.go v4
