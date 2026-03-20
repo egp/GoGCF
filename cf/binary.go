@@ -105,8 +105,13 @@ func (g binaryGCF) Range() Range {
 		return g.resolved.Range()
 	}
 
-	if r, ok := g.op.exactQuotient(); ok {
-		return exactRangeFromRational(r)
+	canLeft, errLeft := canIngestFromChild(g.left)
+	canRight, errRight := canIngestFromChild(g.right)
+
+	if errLeft == nil && errRight == nil && !canLeft && !canRight {
+		if r, ok := g.op.exactQuotient(); ok {
+			return exactRangeFromRational(r)
+		}
 	}
 
 	zr, err := g.op.rangeFromXYRanges(g.left.Range(), g.right.Range())
@@ -247,6 +252,7 @@ func (g binaryGCF) emitStep() (RCFTerm, binaryGCF, error) {
 		right: g.right,
 	}, nil
 }
+
 func (g binaryGCF) step() (binaryDecision, binaryGCF, error) {
 	xr := g.left.Range()
 	yr := g.right.Range()

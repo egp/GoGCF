@@ -246,18 +246,22 @@ func (b binaryLFT) rangeFromXYRanges(xr, yr Range) (Range, error) {
 		{xHi, yHi},
 	}
 
-	var lo Rational
-	var hi Rational
-	for i, corner := range corners {
+	values := make([]Rational, 0, 4)
+	for _, corner := range corners {
 		v, err := b.evalAt(corner[0], corner[1])
 		if err != nil {
-			return Range{}, err
-		}
-		if i == 0 {
-			lo = v
-			hi = v
 			continue
 		}
+		values = append(values, v)
+	}
+
+	if len(values) == 0 {
+		return Range{}, nil
+	}
+
+	lo := values[0]
+	hi := values[0]
+	for _, v := range values[1:] {
 		if rationalCmp(v, lo) < 0 {
 			lo = v
 		}

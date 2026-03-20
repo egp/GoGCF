@@ -141,3 +141,40 @@ func TestWB_BinaryGCF_Step_ChoosesIngestYWhenPredictedOutputRangeIsBetter(t *tes
 	assertBigIntString(t, "r.Lo.Value.Num", r.Lo.Value.Num, "3")
 	assertBigIntString(t, "r.Lo.Value.Den", r.Lo.Value.Den, "2")
 }
+
+func TestWB_BinaryGCF_Step_OnRemainderOfThreePlusSqrt2_ChoosesIngestY(t *testing.T) {
+	g := Add(FromSource(Int64(3)), FromSource(Sqrt2()))
+
+	bg, ok := g.(binaryGCF)
+	if !ok {
+		t.Fatalf("Add() concrete type = %T, want binaryGCF", g)
+	}
+
+	term, rest, err := bg.Next()
+	if err != nil {
+		t.Fatalf("first Next() error: %v", err)
+	}
+	if !term.IsValue() {
+		t.Fatalf("first term should be a value")
+	}
+	value, ok := term.BigInt()
+	if !ok {
+		t.Fatalf("first term should expose a BigInt")
+	}
+	if got, want := value.String(), "4"; got != want {
+		t.Fatalf("first term = %s, want %s", got, want)
+	}
+
+	nextBG, ok := rest.(binaryGCF)
+	if !ok {
+		t.Fatalf("remainder concrete type = %T, want binaryGCF", rest)
+	}
+
+	action, _, err := nextBG.step()
+	if err != nil {
+		t.Fatalf("remainder step() error: %v", err)
+	}
+	if action != decisionIngestRight {
+		t.Fatalf("remainder step() action = %v, want %v", action, decisionIngestRight)
+	}
+}
