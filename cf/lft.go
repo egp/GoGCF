@@ -1,4 +1,4 @@
-// cf/lft.go v9
+// cf/lft.go v10
 package cf
 
 import "math/big"
@@ -105,6 +105,32 @@ func (b binaryLFT) ingestRight(p, q *big.Int) binaryLFT {
 	}
 }
 
+func (b binaryLFT) exactQuotient() (Rational, bool) {
+	u := b.collapseRightEOF()
+	r, err := u.collapseEOFToRational()
+	if err != nil {
+		return Rational{}, false
+	}
+	return r, true
+}
+
+func (b binaryLFT) emit(term *big.Int) binaryLFT {
+	if term == nil {
+		return b
+	}
+
+	return binaryLFT{
+		a: new(big.Int).Set(b.e),
+		b: new(big.Int).Set(b.f),
+		c: new(big.Int).Set(b.g),
+		d: new(big.Int).Set(b.h),
+		e: new(big.Int).Sub(new(big.Int).Set(b.a), new(big.Int).Mul(new(big.Int).Set(term), b.e)),
+		f: new(big.Int).Sub(new(big.Int).Set(b.b), new(big.Int).Mul(new(big.Int).Set(term), b.f)),
+		g: new(big.Int).Sub(new(big.Int).Set(b.c), new(big.Int).Mul(new(big.Int).Set(term), b.g)),
+		h: new(big.Int).Sub(new(big.Int).Set(b.d), new(big.Int).Mul(new(big.Int).Set(term), b.h)),
+	}
+}
+
 func (b binaryLFT) collapseLeftEOF() unaryLFT {
 	return unaryLFT{
 		a: new(big.Int).Set(b.a),
@@ -150,4 +176,4 @@ func addMul(x, y, z *big.Int) *big.Int {
 	return new(big.Int).Add(new(big.Int).Mul(x, y), z)
 }
 
-// cf/lft.go v9
+// cf/lft.go v10

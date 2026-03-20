@@ -1,4 +1,4 @@
-// cf/binary_wb_test.go v1
+// cf/binary_wb_test.go v2
 package cf
 
 import (
@@ -48,6 +48,7 @@ func TestWB_Add_ConstructsBinaryGCF_WithAdditionLFT(t *testing.T) {
 	assertBigIntString(t, "op.g", bg.op.g, "0")
 	assertBigIntString(t, "op.h", bg.op.h, "1")
 }
+
 func TestWB_Sub_ConstructsBinaryGCF_WithSubtractionLFT(t *testing.T) {
 	g := Sub(FromSource(Int64(1)), FromSource(Int64(2)))
 
@@ -83,6 +84,7 @@ func TestWB_Mul_ConstructsBinaryGCF_WithMultiplicationLFT(t *testing.T) {
 	assertBigIntString(t, "op.g", bg.op.g, "0")
 	assertBigIntString(t, "op.h", bg.op.h, "1")
 }
+
 func TestWB_Div_ConstructsBinaryGCF_WithDivisionLFT(t *testing.T) {
 	g := Div(FromSource(Int64(1)), FromSource(Int64(2)))
 
@@ -159,7 +161,7 @@ func TestWB_BinaryGCF_IngestRightStep_UsesChildEvaluatorOutput(t *testing.T) {
 		t.Fatalf("next.right.Next() error: %v", err)
 	}
 	if !rightTerm.IsEOF() {
-		t.Fatalf("right child should have advanced to EOF after one ingest")
+		t.Fatalf("right child should have advanced to EOF after right-ingest step")
 	}
 }
 
@@ -246,7 +248,7 @@ func TestWB_BinaryGCF_Step_ChoosesRightWhenLeftIsExhausted(t *testing.T) {
 	}
 }
 
-func TestWB_BinaryGCF_Step_ReturnsErrStuckWhenNeitherChildCanIngest(t *testing.T) {
+func TestWB_BinaryGCF_Step_ChoosesEmitWhenNeitherChildCanIngestAndExactEmitIsAvailable(t *testing.T) {
 	g := Add(FromSource(Int64(3)), FromSource(Int64(5)))
 
 	bg, ok := g.(binaryGCF)
@@ -264,9 +266,12 @@ func TestWB_BinaryGCF_Step_ReturnsErrStuckWhenNeitherChildCanIngest(t *testing.T
 		t.Fatalf("second step() error: %v", err)
 	}
 
-	_, _, err = next2.step()
-	if err != ErrStuck {
-		t.Fatalf("third step() error = %v, want %v", err, ErrStuck)
+	action3, _, err := next2.step()
+	if err != nil {
+		t.Fatalf("third step() error: %v", err)
+	}
+	if action3 != decisionEmitOutput {
+		t.Fatalf("third step() action = %v, want %v", action3, decisionEmitOutput)
 	}
 }
 
@@ -474,4 +479,80 @@ func TestWB_BinaryGCF_Next_DoesNotMutateOriginalNodeWhenResolving(t *testing.T) 
 	}
 }
 
-// cf/binary_wb_test.go v1
+func TestWB_BinaryGCF_EmitStep_AfterBothIngestsOnDivTwelveByFive_EmitsTwoAndLeavesFiveOverTwo(t *testing.T) {
+	g := Div(FromSource(Int64(12)), FromSource(Int64(5)))
+
+	bg, ok := g.(binaryGCF)
+	if !ok {
+		t.Fatalf("Div() concrete type = %T, want binaryGCF", g)
+	}
+
+	_, bg1, err := bg.step()
+	if err != nil {
+		t.Fatalf("first step() error: %v", err)
+	}
+
+	_, bg2, err := bg1.step()
+	if err != nil {
+		t.Fatalf("second step() error: %v", err)
+	}
+
+	term, next, err := bg2.emitStep()
+	if err != nil {
+		t.Fatalf("emitStep() error: %v", err)
+	}
+	if !term.IsValue() {
+		t.Fatalf("emitStep() should emit a value term")
+	}
+
+	value, ok := term.BigInt()
+	if !ok {
+		t.Fatalf("emitStep() value term should expose a BigInt")
+	}
+	if got, want := value.String(), "2"; got != want {
+		t.Fatalf("emitStep() term = %s, want %s", got, want)
+	}
+
+	r, ok := next.op.exactQuotient()
+	if !ok {
+		t.Fatalf("remainder exactQuotient() should succeed after emit")
+	}
+	assertBigIntString(t, "r.Num", r.Num, "5")
+	assertBigIntString(t, "r.Den", r.Den, "2")
+}
+
+func TestWB_BinaryGCF_Step_ChoosesEmitWhenExactEmitIsAvailable(t *testing.T) {
+	g := Div(FromSource(Int64(12)), FromSource(Int64(5)))
+
+	bg, ok := g.(binaryGCF)
+	if !ok {
+		t.Fatalf("Div() concrete type = %T, want binaryGCF", g)
+	}
+
+	_, bg1, err := bg.step()
+	if err != nil {
+		t.Fatalf("first step() error: %v", err)
+	}
+
+	_, bg2, err := bg1.step()
+	if err != nil {
+		t.Fatalf("second step() error: %v", err)
+	}
+
+	action, next, err := bg2.step()
+	if err != nil {
+		t.Fatalf("third step() error: %v", err)
+	}
+	if action != decisionEmitOutput {
+		t.Fatalf("third step() action = %v, want %v", action, decisionEmitOutput)
+	}
+
+	r, ok := next.op.exactQuotient()
+	if !ok {
+		t.Fatalf("remainder exactQuotient() should succeed after emit")
+	}
+	assertBigIntString(t, "r.Num", r.Num, "5")
+	assertBigIntString(t, "r.Den", r.Den, "2")
+}
+
+// cf/binary_wb_test.go v2

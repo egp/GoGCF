@@ -261,4 +261,51 @@ func TestWB_AddPath_AfterBothIngests_CollapseRightEOFThenUnaryEOF_GivesEight(t *
 	assertBigIntString(t, "r.Den", r.Den, "1")
 }
 
+// append to cf/lft_wb_test.go v2
+func TestWB_BinaryLFT_ExactQuotient_AfterAddThreeAndFiveIngests_IsEightOverOne(t *testing.T) {
+	b := additionBinaryLFT()
+	b = b.ingestLeft(big.NewInt(1), big.NewInt(3))
+	b = b.ingestRight(big.NewInt(1), big.NewInt(5))
+
+	r, ok := b.exactQuotient()
+	if !ok {
+		t.Fatalf("exactQuotient() should succeed after both finite ingests")
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "8")
+	assertBigIntString(t, "r.Den", r.Den, "1")
+}
+
+func TestWB_BinaryLFT_ExactQuotient_AfterDivTwelveByFiveIngests_IsTwelveOverFive(t *testing.T) {
+	b := divisionBinaryLFT()
+	b = b.ingestLeft(big.NewInt(1), big.NewInt(12))
+	b = b.ingestRight(big.NewInt(1), big.NewInt(5))
+
+	r, ok := b.exactQuotient()
+	if !ok {
+		t.Fatalf("exactQuotient() should succeed after both finite ingests")
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "12")
+	assertBigIntString(t, "r.Den", r.Den, "5")
+}
+
+func TestWB_BinaryLFT_Emit_TwelveOverFiveFirstDigitTwo_LeavesFiveOverTwo(t *testing.T) {
+	b := divisionBinaryLFT()
+	b = b.ingestLeft(big.NewInt(1), big.NewInt(12))
+	b = b.ingestRight(big.NewInt(1), big.NewInt(5))
+
+	next := b.emit(big.NewInt(2))
+
+	r, ok := next.exactQuotient()
+	if !ok {
+		t.Fatalf("exactQuotient() should succeed after emitting from exact finite state")
+	}
+
+	assertBigIntString(t, "r.Num", r.Num, "5")
+	assertBigIntString(t, "r.Den", r.Den, "2")
+}
+
+// append to cf/lft_wb_test.go v2
+
 // cf/lft_wb_test.go v1

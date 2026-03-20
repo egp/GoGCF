@@ -1,4 +1,4 @@
-// cf/binary.go v9
+// cf/binary.go v10
 package cf
 
 import "math/big"
@@ -138,6 +138,24 @@ func (g binaryGCF) ingestRightStep() (binaryGCF, error) {
 	}, nil
 }
 
+func (g binaryGCF) emitStep() (RCFTerm, binaryGCF, error) {
+	r, ok := g.op.exactQuotient()
+	if !ok {
+		return RCFTerm{}, g, ErrStuck
+	}
+
+	q, _ := floorDivModBig(r.Num, r.Den)
+
+	return RCFTerm{
+			Kind:  RCFValue,
+			Value: new(big.Int).Set(q),
+		}, binaryGCF{
+			op:    g.op.emit(q),
+			left:  g.left,
+			right: g.right,
+		}, nil
+}
+
 func (g binaryGCF) step() (binaryDecision, binaryGCF, error) {
 	canLeft, err := canIngestFromChild(g.left)
 	if err != nil {
@@ -149,8 +167,13 @@ func (g binaryGCF) step() (binaryDecision, binaryGCF, error) {
 		return 0, g, err
 	}
 
+	canEmit := false
+	if !canLeft && !canRight {
+		_, canEmit = g.op.exactQuotient()
+	}
+
 	state := binaryStepState{
-		canEmitOutput:  false,
+		canEmitOutput:  canEmit,
 		canIngestLeft:  canLeft,
 		canIngestRight: canRight,
 	}
@@ -161,27 +184,56 @@ func (g binaryGCF) step() (binaryDecision, binaryGCF, error) {
 	}
 
 	switch action {
+	case decisionEmitOutput:
+		_, next, err := g.emitStep()
+		if err != nil {
+			return 0, g, err
+		}
+		return decisionEmitOutput, next, nil
+
 	case decisionIngestLeft:
 		next, err := g.ingestLeftStep()
 		if err != nil {
 			return 0, g, err
 		}
 		return decisionIngestLeft, next, nil
+
 	case decisionIngestRight:
 		next, err := g.ingestRightStep()
 		if err != nil {
 			return 0, g, err
 		}
 		return decisionIngestRight, next, nil
+
 	default:
 		return 0, g, ErrStuck
 	}
 }
 
+func (g binaryGCF) ingestOnlyStep() (binaryGCF, error) {
+	canLeft, err := canIngestFromChild(g.left)
+	if err != nil {
+		return g, err
+	}
+	if canLeft {
+		return g.ingestLeftStep()
+	}
+
+	canRight, err := canIngestFromChild(g.right)
+	if err != nil {
+		return g, err
+	}
+	if canRight {
+		return g.ingestRightStep()
+	}
+
+	return g, ErrStuck
+}
+
 func (g binaryGCF) completeToRational() (Rational, error) {
 	cur := g
 	for {
-		_, next, err := cur.step()
+		next, err := cur.ingestOnlyStep()
 		if err == nil {
 			cur = next
 			continue
@@ -263,4 +315,4 @@ func divisionBinaryLFT() binaryLFT {
 	}
 }
 
-// cf/binary.go v9
+// cf/binary.go v10
