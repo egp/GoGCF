@@ -1,4 +1,4 @@
-// cf/binary.go v10
+// cf/binary.go v12
 package cf
 
 import "math/big"
@@ -43,26 +43,61 @@ func Div(x, y GCF) GCF {
 }
 
 func (g binaryGCF) Next() (RCFTerm, GCF, error) {
-	resolved := g.resolved
-	if resolved == nil {
-		prefix, err := g.completeToPrefix()
+	if g.resolved != nil {
+		term, rest, err := g.resolved.Next()
 		if err != nil {
 			return RCFTerm{}, g, err
 		}
-		resolved = prefix
+
+		return term, binaryGCF{
+			op:       g.op,
+			left:     g.left,
+			right:    g.right,
+			resolved: rest,
+		}, nil
 	}
 
-	term, rest, err := resolved.Next()
-	if err != nil {
-		return RCFTerm{}, g, err
-	}
+	cur := g
+	for {
+		action, next, err := cur.step()
+		if err != nil {
+			if err != ErrStuck {
+				return RCFTerm{}, g, err
+			}
 
-	return term, binaryGCF{
-		op:       g.op,
-		left:     g.left,
-		right:    g.right,
-		resolved: rest,
-	}, nil
+			prefix, collapseErr := cur.completeToPrefix()
+			if collapseErr != nil {
+				return RCFTerm{}, g, collapseErr
+			}
+
+			term, rest, nextErr := prefix.Next()
+			if nextErr != nil {
+				return RCFTerm{}, g, nextErr
+			}
+
+			return term, binaryGCF{
+				op:       cur.op,
+				left:     cur.left,
+				right:    cur.right,
+				resolved: rest,
+			}, nil
+		}
+
+		switch action {
+		case decisionEmitOutput:
+			term, emittedNext, emitErr := cur.emitStep()
+			if emitErr != nil {
+				return RCFTerm{}, g, emitErr
+			}
+			return term, emittedNext, nil
+
+		case decisionIngestLeft, decisionIngestRight:
+			cur = next
+
+		default:
+			return RCFTerm{}, g, ErrStuck
+		}
+	}
 }
 
 func (g binaryGCF) Range() Range {
@@ -144,16 +179,27 @@ func (g binaryGCF) emitStep() (RCFTerm, binaryGCF, error) {
 		return RCFTerm{}, g, ErrStuck
 	}
 
-	q, _ := floorDivModBig(r.Num, r.Den)
+	q, rem := floorDivModBig(r.Num, r.Den)
 
-	return RCFTerm{
-			Kind:  RCFValue,
-			Value: new(big.Int).Set(q),
-		}, binaryGCF{
-			op:    g.op.emit(q),
-			left:  g.left,
-			right: g.right,
+	term := RCFTerm{
+		Kind:  RCFValue,
+		Value: new(big.Int).Set(q),
+	}
+
+	if rem.Sign() == 0 {
+		return term, binaryGCF{
+			op:       g.op,
+			left:     g.left,
+			right:    g.right,
+			resolved: rcfPrefixGCF{terms: nil, index: 0},
 		}, nil
+	}
+
+	return term, binaryGCF{
+		op:    g.op.emit(q),
+		left:  g.left,
+		right: g.right,
+	}, nil
 }
 
 func (g binaryGCF) step() (binaryDecision, binaryGCF, error) {
@@ -315,4 +361,4 @@ func divisionBinaryLFT() binaryLFT {
 	}
 }
 
-// cf/binary.go v10
+// cf/binary.go v12
