@@ -1,0 +1,14 @@
+# current_task.txt v1
+First task: advance `binaryGCF.Next()` from "resolve exact finite result then emit" toward a genuine stepwise evaluator.
+Start by asking for the current `MasterPlan.md`, updating it conservatively, then resume implementation.
+
+Highest-priority design question:
+- What is the first correct and testable emit-certification rule for `binaryLFT` under the current coefficient convention?
+
+Acceptance criteria:
+- New red tests compile.
+- At least one meaningful stepwise-emission behavior is specified by tests.
+- The change preserves immutability.
+- Existing exact-finite public arithmetic tests remain green.
+- No EOF is treated as an ingestible algebraic term.
+# current_task.txt v1

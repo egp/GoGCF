@@ -1,0 +1,33 @@
+# checkpoint.txt v1
+Project: GoGCF, immutable GCFSource + immutable GCF evaluator library in the Gosper/HAKMEM style.
+North star: target formula sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°)).
+
+Working:
+- Core public types are in place.
+- Sources: Int64, Rat64, Sqrt2.
+- FromSource pass-through evaluator works.
+- rcfPrefixGCF supports Take/Convergent.
+- Rational -> RCF conversion works.
+- ULFT/BLFT identities, binary decision logic, BLFT ingest transforms work.
+- EOF collapse works: BLFT -> ULFT -> Rational.
+- binaryGCF exists for Add/Sub/Mul/Div.
+- binaryGCF can ingest children, step, collapse to rational, and emit exact-finite public results.
+- binaryGCF.Next() now preserves continuation by wrapping resolved remainder back into binaryGCF.
+
+Broken / missing:
+- binaryGCF.Next() is not yet genuine incremental certified emission.
+- Arithmetic Range() is stubbed.
+- Compare not implemented.
+- Unary evaluator shell missing.
+- Neg/Inv/sqrt/sin/tanh missing.
+- Pi/E missing.
+
+Immediate next step:
+- Make binaryGCF public Next() more genuinely stepwise, starting with emit-certification logic for BLFT.
+
+Important invariants:
+- EOF is a stream-exhausted signal; do not ingest EOF as a term.
+- EOF triggers transform collapse, not algebraic ingestion.
+- Keep immutable source/evaluator model.
+- Use latest supplied file versions as truth; ignore obsolete ones.
+# checkpoint.txt v1

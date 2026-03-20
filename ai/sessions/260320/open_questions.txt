@@ -1,0 +1,7 @@
+# open_questions.txt v1
+- What exact sufficient condition should allow `binaryLFT` to certify an emitted RCF term?
+- How should arithmetic `Range()` be defined and updated for binary/unary evaluators before full certified emission exists?
+- What is the cleanest unary evaluator architecture that fits the current immutable evaluator model?
+- When unary support begins, what minimal sequence best serves correctness and the target formula: `Inv/Neg` first, or `sqrt` first?
+- When `binaryGCF.Next()` becomes truly incremental, how should resolved/exact states be represented without leaking mutable continuation semantics?
+# open_questions.txt v1

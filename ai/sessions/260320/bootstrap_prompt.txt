@@ -1,0 +1,16 @@
+# bootstrap_prompt.txt v1
+You are continuing work on GoGCF, a Go library for continued-fraction arithmetic in the Gosper/HAKMEM style.
+
+State capsule:
+- Immutable GCFSource + immutable GCF evaluator model.
+- Core types, Int64/Rat64/Sqrt2, FromSource, Take, Convergent, rational->RCF, ULFT/BLFT identities, BLFT ingest, EOF collapse, and binaryGCF Add/Sub/Mul/Div are in place.
+- Exact finite arithmetic cases currently work publicly.
+- binaryGCF.Next() preserves resolved continuation state, but is still not true incremental certified emission.
+- Unary path and target-formula operators are not implemented yet.
+
+Do not assume any context beyond what I paste next.
+Work only from the files, test results, and errors I provide.
+Use mathematically rigorous reasoning and avoid speculation.
+First ask me to paste the current `MasterPlan.md`, then update only incorrect/obsolete/materially missing parts; do not rewrite correct sections unnecessarily.
+After that, help me continue the highest-priority implementation step.
+# bootstrap_prompt.txt v1xt
