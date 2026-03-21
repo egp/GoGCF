@@ -1,4 +1,4 @@
-// cf/unary_lft_methods.go v1
+// cf/unary_lft_methods.go v2
 package cf
 
 import "math/big"
@@ -57,6 +57,9 @@ func (u unaryLFT) rangeFromXRange(xr Range) (Range, error) {
 
 	xLo, xHi, ok := finiteInsideRangeEndpoints(xr)
 	if !ok {
+		return Range{}, nil
+	}
+	if unaryLFTPoleTouchesIntervalClosure(u, xLo, xHi) {
 		return Range{}, nil
 	}
 
@@ -128,4 +131,20 @@ func (u unaryLFT) emitCandidateFromRange(xr Range) (*big.Int, bool, error) {
 	return qLo, true, nil
 }
 
-// cf/unary_lft_methods.go v1
+func unaryLFTPoleTouchesIntervalClosure(u unaryLFT, lo, hi Rational) bool {
+	if u.c == nil || u.d == nil || u.c.Sign() == 0 {
+		return false
+	}
+
+	root, err := normalizedRational(Rational{
+		Num: new(big.Int).Neg(new(big.Int).Set(u.d)),
+		Den: new(big.Int).Set(u.c),
+	})
+	if err != nil {
+		return false
+	}
+
+	return rationalCmp(lo, root) <= 0 && rationalCmp(root, hi) <= 0
+}
+
+// cf/unary_lft_methods.go v2

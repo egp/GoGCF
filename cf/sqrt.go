@@ -1,4 +1,4 @@
-// cf/sqrt.go v4
+// cf/sqrt.go v5
 package cf
 
 import "math/big"
@@ -207,177 +207,43 @@ func exactPositiveSqrtImageEnclosure(x Rational, post unaryLFT) (Range, bool, er
 		return exactRangeFromRational(r), true, nil
 	}
 
-	base, err := exactPositiveSqrtEnclosure(xr)
-	if err != nil {
-		return Range{}, false, err
-	}
-
-	if q, ok, err := post.emitCandidateFromRange(base); err != nil {
-		return Range{}, false, err
-	} else if ok {
-		return openUnitIntervalAt(q), true, nil
-	}
-
-	lo, hi, ok := finiteInsideRangeEndpoints(base)
-	if !ok {
-		return Range{}, false, nil
-	}
-
-	for i := 0; i < 64; i++ {
-		mid, err := rationalMidpoint(lo, hi)
-		if err != nil {
-			return Range{}, false, err
-		}
-
-		cmp, err := rationalSquareCmp(mid, xr)
-		if err != nil {
-			return Range{}, false, err
-		}
-		if cmp < 0 {
-			lo = mid
-		} else if cmp > 0 {
-			hi = mid
-		} else {
-			r, err := post.evalAt(mid)
-			if err != nil {
-				return Range{}, false, err
-			}
-			return exactRangeFromRational(r), true, nil
-		}
-
-		refined := Range{
-			Lo: Bound{
-				Kind:   BoundFinite,
-				Value:  lo,
-				Closed: false,
-			},
-			Hi: Bound{
-				Kind:   BoundFinite,
-				Value:  hi,
-				Closed: false,
-			},
-			Outside: false,
-		}
-
-		if q, ok, err := post.emitCandidateFromRange(refined); err != nil {
-			return Range{}, false, err
-		} else if ok {
-			return openUnitIntervalAt(q), true, nil
-		}
-	}
-
-	return Range{}, false, nil
-}
-
-func exactPositiveSqrtEnclosure(x Rational) (Range, error) {
-	xr, err := normalizedRational(x)
-	if err != nil {
-		return Range{}, err
-	}
-	if xr.Num.Sign() < 0 {
-		return Range{}, ErrUndefined
-	}
-
-	if root, ok, err := exactSqrtRational(xr); err != nil {
-		return Range{}, err
-	} else if ok {
-		return exactRangeFromRational(root), nil
-	}
-
-	lo, err := normalizedRational(Rational{
-		Num: floorBigIntSqrt(xr.Num),
-		Den: ceilBigIntSqrt(xr.Den),
-	})
-	if err != nil {
-		return Range{}, err
-	}
-	hi, err := normalizedRational(Rational{
+	upper, err := normalizedRational(Rational{
 		Num: ceilBigIntSqrt(xr.Num),
 		Den: floorBigIntSqrt(xr.Den),
 	})
 	if err != nil {
-		return Range{}, err
+		return Range{}, false, err
 	}
 
-	return Range{
-		Lo: Bound{
-			Kind:   BoundFinite,
-			Value:  lo,
-			Closed: false,
-		},
-		Hi: Bound{
-			Kind:   BoundFinite,
-			Value:  hi,
-			Closed: false,
-		},
-		Outside: false,
-	}, nil
-}
+	for i := 0; i < 64; i++ {
+		refined, err := sqrtEnclosureFromUpperBound(xr, upper)
+		if err != nil {
+			return Range{}, false, err
+		}
 
-func openUnitIntervalAt(q *big.Int) Range {
-	lo := new(big.Int).Set(q)
-	hi := new(big.Int).Add(new(big.Int).Set(q), big.NewInt(1))
+		if _, ok, err := post.emitCandidateFromRange(refined); err != nil {
+			return Range{}, false, err
+		} else if ok {
+			zr, err := post.rangeFromXRange(refined)
+			if err != nil {
+				return Range{}, false, err
+			}
+			if rangeWellFormed(zr) {
+				return zr, true, nil
+			}
+		}
 
-	return Range{
-		Lo: Bound{
-			Kind: BoundFinite,
-			Value: Rational{
-				Num: lo,
-				Den: big.NewInt(1),
-			},
-			Closed: false,
-		},
-		Hi: Bound{
-			Kind: BoundFinite,
-			Value: Rational{
-				Num: hi,
-				Den: big.NewInt(1),
-			},
-			Closed: false,
-		},
-		Outside: false,
-	}
-}
-
-func rationalMidpoint(a, b Rational) (Rational, error) {
-	ar, err := normalizedRational(a)
-	if err != nil {
-		return Rational{}, err
-	}
-	br, err := normalizedRational(b)
-	if err != nil {
-		return Rational{}, err
+		nextUpper, err := newtonUpperSqrtBound(xr, upper)
+		if err != nil {
+			return Range{}, false, err
+		}
+		if rationalCmp(nextUpper, upper) == 0 {
+			break
+		}
+		upper = nextUpper
 	}
 
-	num := new(big.Int).Mul(new(big.Int).Set(ar.Num), new(big.Int).Set(br.Den))
-	num.Add(num, new(big.Int).Mul(new(big.Int).Set(br.Num), new(big.Int).Set(ar.Den)))
-
-	den := new(big.Int).Mul(new(big.Int).Set(ar.Den), new(big.Int).Set(br.Den))
-	den.Mul(den, big.NewInt(2))
-
-	return normalizedRational(Rational{
-		Num: num,
-		Den: den,
-	})
-}
-
-func rationalSquareCmp(a, x Rational) (int, error) {
-	ar, err := normalizedRational(a)
-	if err != nil {
-		return 0, err
-	}
-	xr, err := normalizedRational(x)
-	if err != nil {
-		return 0, err
-	}
-
-	left := new(big.Int).Mul(new(big.Int).Set(ar.Num), new(big.Int).Set(ar.Num))
-	left.Mul(left, xr.Den)
-
-	right := new(big.Int).Mul(new(big.Int).Set(ar.Den), new(big.Int).Set(ar.Den))
-	right.Mul(right, xr.Num)
-
-	return left.Cmp(right), nil
+	return Range{}, false, nil
 }
 
 func exactBigIntSqrt(n *big.Int) (*big.Int, bool) {
@@ -412,4 +278,4 @@ func ceilBigIntSqrt(n *big.Int) *big.Int {
 	return new(big.Int).Add(floor, big.NewInt(1))
 }
 
-// cf/sqrt.go v4
+// cf/sqrt.go v5

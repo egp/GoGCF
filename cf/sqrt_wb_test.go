@@ -414,5 +414,65 @@ func TestWB_SqrtStrategy_RangeFromOperand_ExactTwoAfterEmitOne_IsInsideTwoToThre
 		t.Fatalf("post-emit sqrt(2) remainder should stay open")
 	}
 }
+func TestWB_NewtonUpperSqrtBound_TwoFromTwo_IsThreeOverTwo(t *testing.T) {
+	next, err := newtonUpperSqrtBound(
+		Rational{Num: big.NewInt(2), Den: big.NewInt(1)},
+		Rational{Num: big.NewInt(2), Den: big.NewInt(1)},
+	)
+	if err != nil {
+		t.Fatalf("newtonUpperSqrtBound() error: %v", err)
+	}
+
+	assertBigIntString(t, "next.Num", next.Num, "3")
+	assertBigIntString(t, "next.Den", next.Den, "2")
+}
+
+func TestWB_SqrtEnclosureFromUpperBound_TwoFromThreeOverTwo_IsOpenFourThirdsToThreeHalves(t *testing.T) {
+	zr, err := sqrtEnclosureFromUpperBound(
+		Rational{Num: big.NewInt(2), Den: big.NewInt(1)},
+		Rational{Num: big.NewInt(3), Den: big.NewInt(2)},
+	)
+	if err != nil {
+		t.Fatalf("sqrtEnclosureFromUpperBound() error: %v", err)
+	}
+	if zr.IsExact() {
+		t.Fatalf("sqrtEnclosureFromUpperBound() should not be exact")
+	}
+	if zr.Outside {
+		t.Fatalf("sqrtEnclosureFromUpperBound() should return an inside range")
+	}
+
+	assertBigIntString(t, "zr.Lo.Value.Num", zr.Lo.Value.Num, "4")
+	assertBigIntString(t, "zr.Lo.Value.Den", zr.Lo.Value.Den, "3")
+	assertBigIntString(t, "zr.Hi.Value.Num", zr.Hi.Value.Num, "3")
+	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "2")
+	if zr.Lo.Closed || zr.Hi.Closed {
+		t.Fatalf("irrational sqrt enclosure should stay open")
+	}
+}
+
+func TestWB_SqrtEnclosureFromUpperBound_TwoFromSeventeenTwelfths_IsOpenTwentyFourSeventeenthsToSeventeenTwelfths(t *testing.T) {
+	zr, err := sqrtEnclosureFromUpperBound(
+		Rational{Num: big.NewInt(2), Den: big.NewInt(1)},
+		Rational{Num: big.NewInt(17), Den: big.NewInt(12)},
+	)
+	if err != nil {
+		t.Fatalf("sqrtEnclosureFromUpperBound() error: %v", err)
+	}
+	if zr.IsExact() {
+		t.Fatalf("sqrtEnclosureFromUpperBound() should not be exact")
+	}
+	if zr.Outside {
+		t.Fatalf("sqrtEnclosureFromUpperBound() should return an inside range")
+	}
+
+	assertBigIntString(t, "zr.Lo.Value.Num", zr.Lo.Value.Num, "24")
+	assertBigIntString(t, "zr.Lo.Value.Den", zr.Lo.Value.Den, "17")
+	assertBigIntString(t, "zr.Hi.Value.Num", zr.Hi.Value.Num, "17")
+	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "12")
+	if zr.Lo.Closed || zr.Hi.Closed {
+		t.Fatalf("irrational sqrt enclosure should stay open")
+	}
+}
 
 // cf/sqrt_wb_test.go v1
