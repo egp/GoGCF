@@ -101,5 +101,23 @@ func TestBB_Sqrt_Int64_NegativeOne_NextReturnsErrUndefined(t *testing.T) {
 		t.Fatalf("Next() error = %v, want %v", err, cf.ErrUndefined)
 	}
 }
+func TestBB_Sqrt_Int64_Two_FirstTermIsOne(t *testing.T) {
+	g := cf.Sqrt(cf.FromSource(cf.Int64(2)))
+
+	term1, _, err := g.Next()
+	if err != nil {
+		t.Fatalf("first Next() error: %v", err)
+	}
+	if !term1.IsValue() {
+		t.Fatalf("first term should be a value")
+	}
+	value1, ok := term1.BigInt()
+	if !ok {
+		t.Fatalf("first term should expose a BigInt")
+	}
+	if got, want := value1.String(), "1"; got != want {
+		t.Fatalf("first term = %s, want %s", got, want)
+	}
+}
 
 // cf/sqrt_bb_test.go v1

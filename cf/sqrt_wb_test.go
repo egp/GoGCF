@@ -317,5 +317,51 @@ func TestWB_StrategyUnaryGCF_WithSqrtStrategy_OpenFourToTwentyFiveOverFour_Emits
 		t.Fatalf("first term = %s, want %s", got, want)
 	}
 }
+func TestWB_SqrtStrategy_RangeFromOperand_ExactTwo_IsOpenOneToTwo(t *testing.T) {
+	s := sqrtStrategy{}
+
+	xr := exactRangeFromRational(Rational{
+		Num: big.NewInt(2),
+		Den: big.NewInt(1),
+	})
+
+	zr, err := s.RangeFromOperand(xr)
+	if err != nil {
+		t.Fatalf("RangeFromOperand() error: %v", err)
+	}
+	if zr.IsExact() {
+		t.Fatalf("RangeFromOperand() should not be exact")
+	}
+	if zr.Outside {
+		t.Fatalf("RangeFromOperand() should return an inside range")
+	}
+
+	assertBigIntString(t, "zr.Lo.Value.Num", zr.Lo.Value.Num, "1")
+	assertBigIntString(t, "zr.Lo.Value.Den", zr.Lo.Value.Den, "1")
+	assertBigIntString(t, "zr.Hi.Value.Num", zr.Hi.Value.Num, "2")
+	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "1")
+	if zr.Lo.Closed || zr.Hi.Closed {
+		t.Fatalf("sqrt(2) should be strictly between 1 and 2")
+	}
+}
+
+func TestWB_SqrtStrategy_EmitCandidateFromOperand_ExactTwo_CertifiesOne(t *testing.T) {
+	s := sqrtStrategy{}
+
+	xr := exactRangeFromRational(Rational{
+		Num: big.NewInt(2),
+		Den: big.NewInt(1),
+	})
+
+	q, ok, err := s.EmitCandidateFromOperand(xr)
+	if err != nil {
+		t.Fatalf("EmitCandidateFromOperand() error: %v", err)
+	}
+	if !ok {
+		t.Fatalf("EmitCandidateFromOperand() should certify an output term")
+	}
+
+	assertBigIntString(t, "q", q, "1")
+}
 
 // cf/sqrt_wb_test.go v1
