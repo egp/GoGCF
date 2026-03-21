@@ -1,10 +1,5 @@
-// cf/diag.go v2
+// cf/diag.go v3
 package cf
-
-import (
-	"io"
-	"math/big"
-)
 
 type diagGCF struct {
 	op       diagLFT
@@ -12,98 +7,50 @@ type diagGCF struct {
 	resolved GCF
 }
 
-func (g diagGCF) Next() (RCFTerm, GCF, error) {
-	if g.resolved != nil {
-		term, rest, err := g.resolved.Next()
-		if err != nil {
-			return RCFTerm{}, g, err
-		}
-		return term, diagGCF{
-			op:       g.op,
-			child:    g.child,
-			resolved: rest,
-		}, nil
+func (g diagGCF) asStrategyUnary() strategyUnaryGCF {
+	return strategyUnaryGCF{
+		strategy: diagLFTStrategy{op: g.op},
+		child:    g.child,
+		resolved: g.resolved,
 	}
+}
 
-	xr := g.child.Range()
-	q, ok, err := g.op.emitCandidateFromRange(xr)
+func diagGCFfromStrategy(sg strategyUnaryGCF) diagGCF {
+	strategy, ok := sg.strategy.(diagLFTStrategy)
+	if !ok {
+		return diagGCF{}
+	}
+	return diagGCF{
+		op:       strategy.op,
+		child:    sg.child,
+		resolved: sg.resolved,
+	}
+}
+
+func (g diagGCF) Next() (RCFTerm, GCF, error) {
+	term, rest, err := g.asStrategyUnary().Next()
 	if err != nil {
 		return RCFTerm{}, g, err
 	}
+
+	nextSG, ok := rest.(strategyUnaryGCF)
 	if !ok {
 		return RCFTerm{}, g, ErrUndefined
 	}
 
-	term := RCFTerm{
-		Kind:  RCFValue,
-		Value: new(big.Int).Set(q),
-	}
-
-	if x, exact := exactFiniteRangeValue(xr); exact {
-		z, err := g.op.evalAt(x)
-		if err != nil {
-			return RCFTerm{}, g, err
-		}
-		_, rem := floorDivModBig(z.Num, z.Den)
-		if rem.Sign() == 0 {
-			return term, diagGCF{
-				op:       g.op,
-				child:    g.child,
-				resolved: rcfPrefixGCF{terms: nil, index: 0},
-			}, nil
-		}
-	}
-
-	return term, diagGCF{
-		op:    g.op.emit(q),
-		child: g.child,
-	}, nil
+	return term, diagGCFfromStrategy(nextSG), nil
 }
 
 func (g diagGCF) Range() Range {
-	if g.resolved != nil {
-		return g.resolved.Range()
-	}
-
-	zr, err := g.op.rangeFromXRange(g.child.Range())
-	if err != nil {
-		return Range{}
-	}
-	return zr
+	return g.asStrategyUnary().Range()
 }
 
 func (g diagGCF) Take(n int) (GCF, error) {
-	if n < 0 {
-		return nil, ErrUndefined
-	}
-
-	terms := make([]*big.Int, 0, n)
-	cur := GCF(g)
-
-	for len(terms) < n {
-		term, rest, err := cur.Next()
-		if err != nil {
-			return nil, err
-		}
-
-		if term.IsEOF() {
-			return rcfPrefixGCF{terms: terms, index: 0}, io.EOF
-		}
-
-		value, ok := term.BigInt()
-		if !ok {
-			return nil, ErrUndefined
-		}
-
-		terms = append(terms, new(big.Int).Set(value))
-		cur = rest
-	}
-
-	return rcfPrefixGCF{terms: terms, index: 0}, nil
+	return g.asStrategyUnary().Take(n)
 }
 
 func (g diagGCF) Convergent() (Rational, error) {
-	return Rational{}, ErrUndefined
+	return g.asStrategyUnary().Convergent()
 }
 
-// cf/diag.go v2
+// cf/diag.go v3

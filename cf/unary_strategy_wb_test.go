@@ -148,4 +148,78 @@ func TestWB_StrategyUnaryGCF_Next_DoesNotMutateOriginalNode(t *testing.T) {
 	assertBigIntString(t, "r.Lo.Value.Den", r.Lo.Value.Den, "5")
 }
 
+func TestWB_StrategyUnaryGCF_WithUnaryLFTStrategy_IdentityOverTwelveOverFive_EmitsTwoThenLeavesExactFiveOverTwo(t *testing.T) {
+	g := strategyUnaryGCF{
+		strategy: unaryLFTStrategy{op: identityUnaryLFT()},
+		child:    FromSource(Rat64(12, 5)),
+	}
+
+	term, rest, err := g.Next()
+	if err != nil {
+		t.Fatalf("Next() error: %v", err)
+	}
+	if !term.IsValue() {
+		t.Fatalf("first term should be a value")
+	}
+
+	value, ok := term.BigInt()
+	if !ok {
+		t.Fatalf("first term should expose a BigInt")
+	}
+	if got, want := value.String(), "2"; got != want {
+		t.Fatalf("first term = %s, want %s", got, want)
+	}
+
+	nextSG, ok := rest.(strategyUnaryGCF)
+	if !ok {
+		t.Fatalf("remainder concrete type = %T, want strategyUnaryGCF", rest)
+	}
+
+	r := nextSG.Range()
+	if !r.IsExact() {
+		t.Fatalf("remainder Range() should be exact")
+	}
+	assertBigIntString(t, "r.Lo.Value.Num", r.Lo.Value.Num, "5")
+	assertBigIntString(t, "r.Lo.Value.Den", r.Lo.Value.Den, "2")
+	assertBigIntString(t, "r.Hi.Value.Num", r.Hi.Value.Num, "5")
+	assertBigIntString(t, "r.Hi.Value.Den", r.Hi.Value.Den, "2")
+}
+
+func TestWB_StrategyUnaryGCF_WithDiagLFTStrategy_IdentityOverTwelveOverFive_EmitsTwoThenLeavesExactFiveOverTwo(t *testing.T) {
+	g := strategyUnaryGCF{
+		strategy: diagLFTStrategy{op: identityDiagLFT()},
+		child:    FromSource(Rat64(12, 5)),
+	}
+
+	term, rest, err := g.Next()
+	if err != nil {
+		t.Fatalf("Next() error: %v", err)
+	}
+	if !term.IsValue() {
+		t.Fatalf("first term should be a value")
+	}
+
+	value, ok := term.BigInt()
+	if !ok {
+		t.Fatalf("first term should expose a BigInt")
+	}
+	if got, want := value.String(), "2"; got != want {
+		t.Fatalf("first term = %s, want %s", got, want)
+	}
+
+	nextSG, ok := rest.(strategyUnaryGCF)
+	if !ok {
+		t.Fatalf("remainder concrete type = %T, want strategyUnaryGCF", rest)
+	}
+
+	r := nextSG.Range()
+	if !r.IsExact() {
+		t.Fatalf("remainder Range() should be exact")
+	}
+	assertBigIntString(t, "r.Lo.Value.Num", r.Lo.Value.Num, "5")
+	assertBigIntString(t, "r.Lo.Value.Den", r.Lo.Value.Den, "2")
+	assertBigIntString(t, "r.Hi.Value.Num", r.Hi.Value.Num, "5")
+	assertBigIntString(t, "r.Hi.Value.Den", r.Hi.Value.Den, "2")
+}
+
 // cf/unary_strategy_wb_test.go v1
