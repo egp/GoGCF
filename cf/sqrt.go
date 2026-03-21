@@ -16,19 +16,58 @@ func Sqrt(x GCF) GCF {
 
 func (s sqrtStrategy) RangeFromOperand(xr Range) (Range, error) {
 	x, exact := exactFiniteRangeValue(xr)
-	if !exact {
+	if exact {
+		r, ok, err := s.ExactEval(x)
+		if err != nil {
+			return Range{}, err
+		}
+		if !ok {
+			return Range{}, nil
+		}
+		return exactRangeFromRational(r), nil
+	}
+
+	if rangeCertainlyNegative(xr) {
+		return Range{}, ErrUndefined
+	}
+	if !rangeCertainlyNonNegative(xr) {
 		return Range{}, nil
 	}
 
-	r, ok, err := s.ExactEval(x)
-	if err != nil {
-		return Range{}, err
-	}
+	xLo, xHi, ok := finiteInsideRangeEndpoints(xr)
 	if !ok {
 		return Range{}, nil
 	}
 
-	return exactRangeFromRational(r), nil
+	lo, okLo, err := exactSqrtRational(xLo)
+	if err != nil {
+		return Range{}, err
+	}
+	if !okLo {
+		return Range{}, nil
+	}
+
+	hi, okHi, err := exactSqrtRational(xHi)
+	if err != nil {
+		return Range{}, err
+	}
+	if !okHi {
+		return Range{}, nil
+	}
+
+	return Range{
+		Lo: Bound{
+			Kind:   BoundFinite,
+			Value:  lo,
+			Closed: xr.Lo.Closed,
+		},
+		Hi: Bound{
+			Kind:   BoundFinite,
+			Value:  hi,
+			Closed: xr.Hi.Closed,
+		},
+		Outside: false,
+	}, nil
 }
 
 func (s sqrtStrategy) EmitCandidateFromOperand(xr Range) (*big.Int, bool, error) {
@@ -129,6 +168,34 @@ func (s sqrtStrategy) effectivePost() unaryLFT {
 		return identityUnaryLFT()
 	}
 	return s.post
+}
+
+func exactSqrtRational(x Rational) (Rational, bool, error) {
+	xr, err := normalizedRational(x)
+	if err != nil {
+		return Rational{}, false, err
+	}
+	if xr.Num.Sign() < 0 {
+		return Rational{}, false, ErrUndefined
+	}
+
+	rootNum, okNum := exactBigIntSqrt(xr.Num)
+	if !okNum {
+		return Rational{}, false, nil
+	}
+	rootDen, okDen := exactBigIntSqrt(xr.Den)
+	if !okDen {
+		return Rational{}, false, nil
+	}
+
+	r, err := normalizedRational(Rational{
+		Num: rootNum,
+		Den: rootDen,
+	})
+	if err != nil {
+		return Rational{}, false, err
+	}
+	return r, true, nil
 }
 
 // cf/sqrt.go v2
