@@ -1,33 +1,27 @@
-# checkpoint.txt v1
-Project: GoGCF, immutable GCFSource + immutable GCF evaluator library in the Gosper/HAKMEM style.
-North star: target formula sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°)).
-
-Working:
-- Core public types are in place.
-- Sources: Int64, Rat64, Sqrt2.
-- FromSource pass-through evaluator works.
-- rcfPrefixGCF supports Take/Convergent.
-- Rational -> RCF conversion works.
-- ULFT/BLFT identities, binary decision logic, BLFT ingest transforms work.
-- EOF collapse works: BLFT -> ULFT -> Rational.
-- binaryGCF exists for Add/Sub/Mul/Div.
-- binaryGCF can ingest children, step, collapse to rational, and emit exact-finite public results.
-- binaryGCF.Next() now preserves continuation by wrapping resolved remainder back into binaryGCF.
-
-Broken / missing:
-- binaryGCF.Next() is not yet genuine incremental certified emission.
-- Arithmetic Range() is stubbed.
-- Compare not implemented.
-- Unary evaluator shell missing.
-- Neg/Inv/sqrt/sin/tanh missing.
-- Pi/E missing.
-
-Immediate next step:
-- Make binaryGCF public Next() more genuinely stepwise, starting with emit-certification logic for BLFT.
-
-Important invariants:
-- EOF is a stream-exhausted signal; do not ingest EOF as a term.
-- EOF triggers transform collapse, not algebraic ingestion.
-- Keep immutable source/evaluator model.
-- Use latest supplied file versions as truth; ignore obsolete ones.
-# checkpoint.txt v1
+Project: GoGCF, a mathematically correct, immutable, testable Go library for continued-fraction arithmetic in Gosper/HAKMEM style.
+Current milestone: make sqrt(x) a real working unary operator on the unified strategy-based unary substrate.
+Working components:
+- Core public types/interfaces: GCFSource, GCF, PQTerm, RCFTerm, Rational, Bound, Range.
+- Exact finite sources/evaluators: Int64, Rat64, FromSource, Take, Convergent, rational->RCF.
+- Binary arithmetic: Add/Sub/Mul/Div with stepwise emission, range-driven ingest choice, exact finite fallback.
+- Range model with inside/outside, open/closed endpoints, comparison, and zero-domain helpers.
+- Unified unary execution: strategyUnaryGCF.
+- Adapter-backed unary/diag support: unaryLFTStrategy, diagLFTStrategy.
+- diagLFT and diagGCF infrastructure in place.
+- sqrtStrategy implemented on strategyUnaryGCF.
+- sqrt exact cases work: zero, perfect-square rationals, negative exact inputs -> ErrUndefined.
+- sqrt interval propagation works for certainly nonnegative intervals with exact endpoint roots.
+- sqrt uses exact rational Newton-style upper-bound refinement for non-square exact rationals.
+- Public Sqrt(Int64(2)) currently emits first four terms: 1,2,2,2.
+Known failures / missing major work:
+- sqrt not yet pushed far enough to declare stable/trusted for general irrational progress.
+- No E() or Pi() named source yet.
+- No sin or tanh yet.
+- No end-to-end target formula yet.
+Next immediate task:
+- extend sqrt(2) certified progress beyond four terms and validate stability of Newton/refinement + post-transform interaction.
+Constraints / invariants:
+- mathematical correctness first; no floating-point fallback in exact modes.
+- immutable stepping semantics.
+- red/green TDD workflow.
+- named/procedural GCFSource implementations should live in a companion library using only the public API, not in core cf.

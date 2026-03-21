@@ -207,43 +207,14 @@ func exactPositiveSqrtImageEnclosure(x Rational, post unaryLFT) (Range, bool, er
 		return exactRangeFromRational(r), true, nil
 	}
 
-	upper, err := normalizedRational(Rational{
-		Num: ceilBigIntSqrt(xr.Num),
-		Den: floorBigIntSqrt(xr.Den),
-	})
+	got, ok, err := exactPositiveSqrtNewtonFeedback(xr, post)
 	if err != nil {
 		return Range{}, false, err
 	}
-
-	for i := 0; i < 64; i++ {
-		refined, err := sqrtEnclosureFromUpperBound(xr, upper)
-		if err != nil {
-			return Range{}, false, err
-		}
-
-		if _, ok, err := post.emitCandidateFromRange(refined); err != nil {
-			return Range{}, false, err
-		} else if ok {
-			zr, err := post.rangeFromXRange(refined)
-			if err != nil {
-				return Range{}, false, err
-			}
-			if rangeWellFormed(zr) {
-				return zr, true, nil
-			}
-		}
-
-		nextUpper, err := newtonUpperSqrtBound(xr, upper)
-		if err != nil {
-			return Range{}, false, err
-		}
-		if rationalCmp(nextUpper, upper) == 0 {
-			break
-		}
-		upper = nextUpper
+	if !ok {
+		return Range{}, false, nil
 	}
-
-	return Range{}, false, nil
+	return got.ImageRange, true, nil
 }
 
 func exactBigIntSqrt(n *big.Int) (*big.Int, bool) {

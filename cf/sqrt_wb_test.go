@@ -524,5 +524,97 @@ func TestWB_SqrtStrategy_RangeFromOperand_ExactTwoAfterEmitOneTwo_IsInsideSevenT
 		t.Fatalf("post-emit sqrt(2) remainder should stay open")
 	}
 }
+func TestWB_ExactPositiveSqrtNewtonFeedback_ExactTwoWithIdentity_CertifiesOneUsingUpperTwo(t *testing.T) {
+	got, ok, err := exactPositiveSqrtNewtonFeedback(
+		Rational{Num: big.NewInt(2), Den: big.NewInt(1)},
+		identityUnaryLFT(),
+	)
+	if err != nil {
+		t.Fatalf("exactPositiveSqrtNewtonFeedback() error: %v", err)
+	}
+	if !ok {
+		t.Fatalf("exactPositiveSqrtNewtonFeedback() should succeed")
+	}
+	if got.Candidate == nil {
+		t.Fatalf("candidate should be non-nil")
+	}
+
+	assertBigIntString(t, "got.Candidate", got.Candidate, "1")
+	assertBigIntString(t, "got.UpperBound.Num", got.UpperBound.Num, "2")
+	assertBigIntString(t, "got.UpperBound.Den", got.UpperBound.Den, "1")
+
+	if got.ImageRange.IsExact() {
+		t.Fatalf("image range should not be exact")
+	}
+	assertBigIntString(t, "got.ImageRange.Lo.Value.Num", got.ImageRange.Lo.Value.Num, "1")
+	assertBigIntString(t, "got.ImageRange.Lo.Value.Den", got.ImageRange.Lo.Value.Den, "1")
+	assertBigIntString(t, "got.ImageRange.Hi.Value.Num", got.ImageRange.Hi.Value.Num, "2")
+	assertBigIntString(t, "got.ImageRange.Hi.Value.Den", got.ImageRange.Hi.Value.Den, "1")
+	if got.ImageRange.Lo.Closed || got.ImageRange.Hi.Closed {
+		t.Fatalf("sqrt(2) enclosure should stay open")
+	}
+}
+
+func TestWB_ExactPositiveSqrtNewtonFeedback_ExactTwoAfterEmitOne_CertifiesTwoUsingUpperThreeOverTwo(t *testing.T) {
+	got, ok, err := exactPositiveSqrtNewtonFeedback(
+		Rational{Num: big.NewInt(2), Den: big.NewInt(1)},
+		identityUnaryLFT().emit(big.NewInt(1)),
+	)
+	if err != nil {
+		t.Fatalf("exactPositiveSqrtNewtonFeedback() error: %v", err)
+	}
+	if !ok {
+		t.Fatalf("exactPositiveSqrtNewtonFeedback() should succeed")
+	}
+	if got.Candidate == nil {
+		t.Fatalf("candidate should be non-nil")
+	}
+
+	assertBigIntString(t, "got.Candidate", got.Candidate, "2")
+	assertBigIntString(t, "got.UpperBound.Num", got.UpperBound.Num, "3")
+	assertBigIntString(t, "got.UpperBound.Den", got.UpperBound.Den, "2")
+
+	if got.ImageRange.IsExact() {
+		t.Fatalf("image range should not be exact")
+	}
+	assertBigIntString(t, "got.ImageRange.Lo.Value.Num", got.ImageRange.Lo.Value.Num, "2")
+	assertBigIntString(t, "got.ImageRange.Lo.Value.Den", got.ImageRange.Lo.Value.Den, "1")
+	assertBigIntString(t, "got.ImageRange.Hi.Value.Num", got.ImageRange.Hi.Value.Num, "3")
+	assertBigIntString(t, "got.ImageRange.Hi.Value.Den", got.ImageRange.Hi.Value.Den, "1")
+	if got.ImageRange.Lo.Closed || got.ImageRange.Hi.Closed {
+		t.Fatalf("post-emit image range should stay open")
+	}
+}
+
+func TestWB_ExactPositiveSqrtNewtonFeedback_ExactTwoAfterEmitOneTwo_CertifiesTwoUsingUpperSeventeenTwelfths(t *testing.T) {
+	got, ok, err := exactPositiveSqrtNewtonFeedback(
+		Rational{Num: big.NewInt(2), Den: big.NewInt(1)},
+		identityUnaryLFT().emit(big.NewInt(1)).emit(big.NewInt(2)),
+	)
+	if err != nil {
+		t.Fatalf("exactPositiveSqrtNewtonFeedback() error: %v", err)
+	}
+	if !ok {
+		t.Fatalf("exactPositiveSqrtNewtonFeedback() should succeed")
+	}
+	if got.Candidate == nil {
+		t.Fatalf("candidate should be non-nil")
+	}
+
+	assertBigIntString(t, "got.Candidate", got.Candidate, "2")
+	assertBigIntString(t, "got.UpperBound.Num", got.UpperBound.Num, "17")
+	assertBigIntString(t, "got.UpperBound.Den", got.UpperBound.Den, "12")
+
+	if got.ImageRange.IsExact() {
+		t.Fatalf("image range should not be exact")
+	}
+	assertBigIntString(t, "got.ImageRange.Lo.Value.Num", got.ImageRange.Lo.Value.Num, "7")
+	assertBigIntString(t, "got.ImageRange.Lo.Value.Den", got.ImageRange.Lo.Value.Den, "3")
+	assertBigIntString(t, "got.ImageRange.Hi.Value.Num", got.ImageRange.Hi.Value.Num, "5")
+	assertBigIntString(t, "got.ImageRange.Hi.Value.Den", got.ImageRange.Hi.Value.Den, "2")
+	if got.ImageRange.Lo.Closed || got.ImageRange.Hi.Closed {
+		t.Fatalf("post-emit image range should stay open")
+	}
+}
 
 // cf/sqrt_wb_test.go v1
