@@ -1,14 +1,14 @@
 We are at a context-switch point. I am going to start a new chat to reduce latency and keep accuracy high.
 
-Please generate a transition bundle for the next chat, based only on the current conversation state.
+First, ask me for the current copy of the MasterPlan.md. 
+Change incorrect info, add important missing info, but don't change anything else. 
 
-Ask for current MasterPlan.md, change incorrect info, add important missing info, but don't change
-anything else. 
+Please generate a transition bundle for the next chat, based only on the current conversation state.
 
 Produce these artifacts for the next chat to use:
 
-1. Updated MasterPlan.md
-   Purpose:
+1. Updated MasterPlan.md, after making the above changes, and making sure it includes:
+   - purpose
    - durable project truth
    - current status
    - completed work

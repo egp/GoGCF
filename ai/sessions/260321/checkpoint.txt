@@ -1,0 +1,28 @@
+Project: GoGCF, immutable/testable continued-fraction arithmetic in Go.
+Current milestone: solidify sqrt(x) as the first real irrational unary operator.
+Working:
+- Core public API/types exist and finite exact paths work.
+- Binary Add/Sub/Mul/Div work with stepwise emission and range-driven decisions.
+- Range model supports inside/outside, open/closed endpoints, comparison, zero-domain helpers.
+- strategyUnaryGCF is the unified unary execution engine.
+- unaryLFT and diagLFT run through strategy adapters.
+- sqrtStrategy works for exact zero, perfect squares, negative exact inputs -> ErrUndefined.
+- sqrt uses explicit Newton/emission feedback (“Ouroboros”).
+- Sqrt(2) is tested through 10 emitted terms: 1,2,2,2,2,2,2,2,2,2.
+- Square(x) exists as a unary operator using diagLFT.
+- Exact diagnostics work:
+  - Square(Sqrt(x)) = x for nonnegative exact x
+  - Sqrt(Square(x)) = x for nonnegative exact x
+  - Sqrt(Square(x)) = |x| for signed exact x
+Known gaps:
+- sqrt still needs more red tests / hardening on non-exact positive intervals and deeper remainder/range behavior.
+- No E() or Pi() sources yet.
+- No sin or tanh yet.
+- Named/procedural GCFSources should move to a companion library, not core cf.
+Immediate next step:
+- Add targeted red tests for sqrt on harder interval/refinement cases, then green them.
+Constraint/invariant:
+- correctness first, immutable stepping, no floating fallback in exact modes, TDD red/green workflow.
+Next chat:
+- Ask for current MasterPlan.md and update only incorrect/missing parts.
+- Work only from files/errors the user pastes next.

@@ -1,0 +1,5 @@
+- What additional sqrt cases are still unproven enough to matter for correctness before moving on to E()/Pi()/sin/tanh?
+- How should transcendental unary operators like sin and tanh be represented, since they do not naturally fit simple unaryLFT/diagLFT machinery?
+- Should unary-on-unary composition gain broader child-progress leverage beyond the current exact-collapse shortcuts?
+- When sqrt is a bit deeper/stable, what is the best small internal refinement utility to extract from the Ouroboros/Newton feedback logic?
+- How aggressively should core cf be separated from companion named/procedural source libraries, including whether Int64/Rat64/Sqrt2 should eventually move too?

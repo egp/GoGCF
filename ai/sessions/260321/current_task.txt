@@ -1,0 +1,18 @@
+First task for the next chat:
+Add more red tests for sqrt(x), then drive them green.
+
+Focus:
+- non-exact positive intervals
+- deeper remainder/range behavior after repeated emits
+- WB tests for X==square(sqrt(X)) and for X==sqrt(square(X)). Find cases that don't work.
+- cases that stress the Ouroboros Newton/emission loop beyond current covered exact-rational and simple finite-interval cases
+
+Acceptance criteria:
+- new sqrt tests compile cleanly
+- tests expose a real current weakness before production changes
+- resulting green keeps existing sqrt/square diagnostics passing
+- no regressions in go test ./cf and ./tools/check.sh
+
+
+Highest-priority current question:
+What is the next uncovered sqrt case most likely to reveal a correctness or certification weakness in the Ouroboros refinement loop?

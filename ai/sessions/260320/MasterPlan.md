@@ -1,8 +1,7 @@
 <!-- MasterPlan.md v1 -->
 # goGCF Master Plan
 
-> Next chat instruction: ask me to paste the current `MasterPlan.md` first. Update only incorrect, obsolete, or materially missing items; do not rewrite correct sections unnecessarily.
-
+>
 ## Mission
 Build a mathematically correct, testable Go library for continued-fraction arithmetic in the spirit of Gosper/HAKMEM, using immutable generalized-CF sources and immutable evaluators that emit regular CF terms.
 
@@ -24,17 +23,6 @@ The project has moved beyond repo/type scaffolding into a real evaluator path fo
 - `binaryGCF` can step, ingest child output, collapse to exact rational, and emit correct exact-finite public results for current tested cases.
 - `binaryGCF.Next()` now preserves continuation state by wrapping the resolved remainder back into a `binaryGCF`.
 
-### Not done yet
-- `binaryGCF.Next()` is still not true incremental certified emission; it resolves exact-finite arithmetic by collapsing to rational and then emitting from a resolved continuation.
-- `Range()` for arithmetic evaluators is still stubbed.
-- `Compare` is not implemented.
-- Unary evaluator shell does not exist.
-- `Neg`, `Inv`, `sqrt`, `sin`, `tanh` are not implemented.
-- Named sources `Pi()` and `E()` are not implemented.
-- No end-to-end target formula yet.
-
-## Current milestone
-Advance from “exact finite arithmetic via collapse” toward a genuine stepwise evaluator, especially making `binaryGCF.Next()` less of a complete-then-emit fallback and more of a real incremental Gosper-style evaluator.
 
 ## Critical path
 1. Make `binaryGCF.Next()` genuinely stepwise and emission-driven.

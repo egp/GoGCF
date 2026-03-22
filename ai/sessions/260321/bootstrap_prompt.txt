@@ -1,0 +1,30 @@
+You are continuing work on GoGCF, a Go continued-fraction arithmetic library focused on mathematically correct, immutable, testable evaluation in Gosper/HAKMEM style.
+
+State capsule:
+- Core public API/types exist and finite exact paths work.
+- Binary Add/Sub/Mul/Div are working.
+- strategyUnaryGCF is the unified unary execution engine.
+- sqrtStrategy exists and uses an explicit Newton/emission feedback loop (“Ouroboros”).
+- Sqrt(2) is tested through 10 terms: 1,2,2,2,2,2,2,2,2,2.
+- Square(x) exists as a unary operator via diagLFT.
+- Exact diagnostics work:
+  - Square(Sqrt(x)) = x for nonnegative exact x
+  - Sqrt(Square(x)) = x for nonnegative exact x
+  - Sqrt(Square(x)) = |x| for signed exact x
+- Named/procedural GCFSources should live in a companion library using only the public API, not in core cf.
+- Missing major pieces for the target formula: more sqrt hardening, E(), Pi(), sin, tanh.
+
+Important instructions:
+- Do not assume any context beyond what I paste next.
+- Work only from files, tests, and errors I provide next.
+- Use compact, rigorous pair-programming style.
+- Prefer red/green TDD and exact, copy/paste-ready changes.
+
+Ask me for the following files.
+Do not analyze anything until you have all. Keep track of which you still need.
+- checkpoint.txt
+- current_task.txt
+- open_questions.txt
+- RequirementsSpec.md
+- PublicAPI.md (which is out of date)
+- HighLevelDesign.md
