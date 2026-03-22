@@ -537,4 +537,83 @@ func TestWB_SquareOfSqrt_Next_OnClosedSevenFifthsToOpenTenSevenths_FirstThreeTer
 	}
 }
 
+func TestWB_SquareOfSqrt_Next_OnClosedSevenFifthsToOpenTenSevenths_AfterTwoTermsLeavesClosedTwoToOpenThreeRemainder(t *testing.T) {
+	x := scriptedRangeGCF{
+		term: RCFTerm{Kind: RCFValue, Value: big.NewInt(99)},
+		r: Range{
+			Lo: Bound{
+				Kind: BoundFinite,
+				Value: Rational{
+					Num: big.NewInt(7),
+					Den: big.NewInt(5),
+				},
+				Closed: true,
+			},
+			Hi: Bound{
+				Kind: BoundFinite,
+				Value: Rational{
+					Num: big.NewInt(10),
+					Den: big.NewInt(7),
+				},
+				Closed: false,
+			},
+			Outside: false,
+		},
+	}
+
+	g := Square(Sqrt(x))
+
+	term1, rest, err := g.Next()
+	if err != nil {
+		t.Fatalf("first Next() error: %v", err)
+	}
+	if !term1.IsValue() {
+		t.Fatalf("first term should be a value")
+	}
+	value1, ok := term1.BigInt()
+	if !ok {
+		t.Fatalf("first term should expose a BigInt")
+	}
+	if got, want := value1.String(), "1"; got != want {
+		t.Fatalf("first term = %s, want %s", got, want)
+	}
+
+	term2, rest, err := rest.Next()
+	if err != nil {
+		t.Fatalf("second Next() error: %v", err)
+	}
+	if !term2.IsValue() {
+		t.Fatalf("second term should be a value")
+	}
+	value2, ok := term2.BigInt()
+	if !ok {
+		t.Fatalf("second term should expose a BigInt")
+	}
+	if got, want := value2.String(), "2"; got != want {
+		t.Fatalf("second term = %s, want %s", got, want)
+	}
+
+	zr := rest.Range()
+	if !rangeWellFormed(zr) {
+		t.Fatalf("remainder Range() should be well formed")
+	}
+	if zr.IsExact() {
+		t.Fatalf("remainder Range() should not be exact")
+	}
+	if zr.Outside {
+		t.Fatalf("remainder Range() should return an inside range")
+	}
+
+	assertBigIntString(t, "zr.Lo.Value.Num", zr.Lo.Value.Num, "2")
+	assertBigIntString(t, "zr.Lo.Value.Den", zr.Lo.Value.Den, "1")
+	assertBigIntString(t, "zr.Hi.Value.Num", zr.Hi.Value.Num, "3")
+	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "1")
+	if !zr.Lo.Closed {
+		t.Fatalf("lower endpoint 2 should be closed because x=7/5 is included")
+	}
+	if zr.Hi.Closed {
+		t.Fatalf("upper endpoint 3 should be open because x=10/7 is excluded")
+	}
+}
+
 // cf/sqrt_strategy_integration_wb_test.go v1
