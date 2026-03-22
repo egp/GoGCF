@@ -174,4 +174,69 @@ func (s squareStrategy) ExactEval(x Rational) (Rational, bool, error) {
 	return r, true, nil
 }
 
+func (s squareStrategy) ExactFromChild(child GCF) (Rational, bool, error) {
+	if x, exact := exactFiniteRangeValue(child.Range()); exact {
+		return s.ExactEval(x)
+	}
+
+	sg, ok := asStrategyUnaryGCF(child)
+	if !ok {
+		return Rational{}, false, nil
+	}
+
+	sqrtS, ok := sg.strategy.(sqrtStrategy)
+	if !ok {
+		return Rational{}, false, nil
+	}
+
+	if !unaryLFTEqual(sqrtS.effectivePost(), identityUnaryLFT()) {
+		return Rational{}, false, nil
+	}
+
+	x, exact := exactFiniteRangeValue(sg.child.Range())
+	if !exact {
+		return Rational{}, false, nil
+	}
+	if x.Num.Sign() < 0 {
+		return Rational{}, false, ErrUndefined
+	}
+
+	r, err := normalizedRational(x)
+	if err != nil {
+		return Rational{}, false, err
+	}
+	return r, true, nil
+}
+
+func asStrategyUnaryGCF(child GCF) (strategyUnaryGCF, bool) {
+	switch c := child.(type) {
+	case strategyUnaryGCF:
+		return c, true
+	case unaryGCF:
+		return c.asStrategyUnary(), true
+	case diagGCF:
+		return c.asStrategyUnary(), true
+	default:
+		return strategyUnaryGCF{}, false
+	}
+}
+
+func unaryLFTEqual(a, b unaryLFT) bool {
+	return bigIntEqual(a.a, b.a) &&
+		bigIntEqual(a.b, b.b) &&
+		bigIntEqual(a.c, b.c) &&
+		bigIntEqual(a.d, b.d)
+}
+
+func bigIntEqual(a, b *big.Int) bool {
+	switch {
+	case a == nil && b == nil:
+		return true
+	case a == nil || b == nil:
+		return false
+	default:
+		return a.Cmp(b) == 0
+	}
+}
+
 // cf/square.go v1

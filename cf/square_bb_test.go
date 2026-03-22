@@ -120,4 +120,58 @@ func TestBB_Square_Sqrt_Int64_Four_EmitsFourThenEOF(t *testing.T) {
 	}
 }
 
+func TestBB_Square_Sqrt_Int64_Two_EmitsTwoThenEOF(t *testing.T) {
+	g := cf.Square(cf.Sqrt(cf.FromSource(cf.Int64(2))))
+
+	term1, rest, err := g.Next()
+	if err != nil {
+		t.Fatalf("first Next() error: %v", err)
+	}
+	if !term1.IsValue() {
+		t.Fatalf("first term should be a value")
+	}
+	value1, ok := term1.BigInt()
+	if !ok {
+		t.Fatalf("first term should expose a BigInt")
+	}
+	if got, want := value1.String(), "2"; got != want {
+		t.Fatalf("first term = %s, want %s", got, want)
+	}
+
+	term2, _, err := rest.Next()
+	if err != nil {
+		t.Fatalf("second Next() error: %v", err)
+	}
+	if !term2.IsEOF() {
+		t.Fatalf("second term should be EOF")
+	}
+}
+
+func TestBB_Square_Sqrt_Int64_Three_EmitsThreeThenEOF(t *testing.T) {
+	g := cf.Square(cf.Sqrt(cf.FromSource(cf.Int64(3))))
+
+	term1, rest, err := g.Next()
+	if err != nil {
+		t.Fatalf("first Next() error: %v", err)
+	}
+	if !term1.IsValue() {
+		t.Fatalf("first term should be a value")
+	}
+	value1, ok := term1.BigInt()
+	if !ok {
+		t.Fatalf("first term should expose a BigInt")
+	}
+	if got, want := value1.String(), "3"; got != want {
+		t.Fatalf("first term = %s, want %s", got, want)
+	}
+
+	term2, _, err := rest.Next()
+	if err != nil {
+		t.Fatalf("second Next() error: %v", err)
+	}
+	if !term2.IsEOF() {
+		t.Fatalf("second term should be EOF")
+	}
+}
+
 // cf/square_bb_test.go v1

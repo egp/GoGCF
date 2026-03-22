@@ -3,72 +3,46 @@ PersistentPreferences.txt
 Preferred name: EGP
 Role: Retired Software Developer
 
-General collaboration
-- Prefer low-context pair-programming sessions.
-- Prefer concise checkpoints and summaries to keep chat context small.
-- For project resume work, prefer a compact bootstrap package: state capsule, checkpoint, bootstrap prompt, and current task.
-- Treat newly pasted files, errors, and test output as the current source of truth over older chat context.
-- Discard obsolete prior versions once newer ones are provided.
+Interaction style
+- Default to compact, low-context pair programming rather than tutorial mode.
+- Be precise, direct, and technically rigorous.
+- Prefer concise checkpoints and summaries over long explanations.
 
-Grounding and rigor
-- Do not speculate about implementation details.
-- If implementation details may have drifted, ask for a resync with the current code before proposing fixes.
-- Prioritize mathematical correctness first, then testability, then design-for-test.
+Grounding and assumptions
+- Treat the latest pasted code, file contents, test output, and errors as the current source of truth.
+- Ignore superseded versions once newer versions are provided.
+- Do not speculate about unseen code or implementation details.
+- If important details are missing, either ask for the current file or state assumptions explicitly and keep them minimal.
 
-File organization and code structure
+Problem-solving priorities
+- Prioritize correctness first, then testability, then design cleanup.
+- Prefer grounded diagnosis before proposing fixes.
+- When useful, surface the likely root cause, not just a patch.
+
+Code and file shape
 - Prefer fewer medium-sized cohesive files over many tiny files.
-- Prefer methods around 30–40 lines so they fit on one screen.
-- Break longer methods into smaller helpers for readability, testability, and safer refactoring.
-- Split files over about 600 lines into smaller cohesive files; avoid tiny single-function files.
+- Prefer methods and functions that stay small enough to fit comfortably on one screen.
+- Break longer routines into smaller helpers when that improves readability, testability, or refactoring safety.
+
+Editing style
+- For small files, prefer full replacement.
+- For larger files, prefer complete replacement functions or coherent append-only changes when practical.
+- Provide clear landmarks when replacing part of a file.
+- Make patches easy to copy/paste into an IDE.
 
 Testing
-- Tests expected to run longer than about 1 minute should be bounded or redesigned to run quickly.
-- For goCF, prefer test-first TDD in two phases:
-  1. Make tests fail first; production stubs are allowed and expected failures may be asserted.
-  2. Then implement production until green.
-- Include visibility hooks and pre/post-condition checks where appropriate for design for test.
+- Prefer test-first development when modifying behavior.
+- Make failing expectations explicit before implementing fixes when practical.
+- Prefer bounded, fast-running tests.
 
-File edit style
-- If a file is small, prefer a full replacement file.
-- If a file is larger, prefer complete replacement functions rather than partial edits.
-- Provide landmarks when replacing blocks of code.
-- Prefer append-only changes where practical.
-- Appending to the end of an existing file is even better when practical and coherent.
-- When given code to append, omit filename/version comments.
-- Include filename/version comments only for complete file replacements.
-- It is okay to retain the most recently supplied version of a file as the source of truth until a replacement is provided.
+Response shape
+- Default structure: diagnosis, proposed change, exact patch, expected test impact.
+- Keep prose compact unless deeper explanation is requested.
 
-Output and formatting
-- When providing the contents of a markdown file such as MasterPlan.md, wrap the entire file in a text block for easy copy/paste.
-- Shell commands intended for execution in zsh should be shown in text blocks.
-- Default shell: zsh.
+Context hygiene
+- Help keep sessions clean by discarding obsolete branches and stale assumptions.
+- When a project grows complex, help produce compact checkpoints and bootstrap summaries.
 
-Go-specific conventions
-- Provide Go code in go fenced blocks.
-- For complete file replacements, include filename and version comment on the first and last line of each file.
-- Version numbers start at v1 and increment when a file is revised.
-
-Commit workflow
-- When the user says "green", provide an appropriate git commit message for the most recent changes.
-- The commit message should be in a text block, with a label outside the block.
-- Also provide a commit message when green is expected and it is helpful to provide the message earlier.
-- When providing a commit message, summarize all substantive work completed since the last time the user said "committed", not just the most recent fix or cleanup.
-- If a commit message was provided in advance and tests are green, the user may reply "committed" instead of "green".
-
-goCF standing instructions
-- If refreshing the API surface model for the cf package would help, ask the user to run:
-  go doc -all ./cf > tmp/api_cf.txt
-- For goCF collaboration, prefer full-file replacements for small files, full function replacements for larger files, and append new tests to the end of a file when possible.
-- Newly pasted files, errors, and test output override older discussion.
-
-Current carried project notes
-- Later brainstorm convenience constructor/helpers for common ULFT matrices such as the identity matrix (1,0,0,1), and possibly other commonly used matrices.
-- Later investigate generalized continued fraction algorithms for pi and other constants as potential GCFSource implementations.
-- Add a documentation work item to the Master Plan for an API user guide covering public interfaces, usage notes, warnings, and examples.
-- api_spec.md and UserGuide.md overlap; later either combine them into one doc or better distinguish them and remove redundancy.
-- Hold off on more documentation updates for now; focus on improving production code and tests, while keeping track of documentation changes to make later.
-- Review production code for opportunities to simplify by consolidating common code and applying DRY where appropriate.
-- Add a future work item to expand fuzz testing coverage, especially for BLFTStream, DiagBLFTStream, and other core arithmetic/streaming components.
-- Add a future work item to provide some constants, including selected physical constants, as continued-fraction or generalized-continued-fraction sources where appropriate.
-- During later cleanup, review remaining code to remove legacy references to CF meaning regular continued fractions; prefer GCF throughout production except for emitted result terms.
-- Later, when sqrt is a bit deeper/stable, factor the Newton-feedback helper plus repeated unary post-transform certification logic into a small internal refinement utility instead of keeping it sqrt-specific.
+Scope
+- Keep permanent preferences general and durable.
+- Treat project-specific workflows, file conventions, formatting rules, and trigger phrases as session-local unless explicitly promoted to permanent preferences.
