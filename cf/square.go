@@ -1,4 +1,4 @@
-// cf/square.go v1
+// cf/square.go v2
 package cf
 
 import "math/big"
@@ -208,6 +208,35 @@ func (s squareStrategy) ExactFromChild(child GCF) (Rational, bool, error) {
 	return r, true, nil
 }
 
+func (s squareStrategy) RangeFromChild(child GCF) (Range, bool, error) {
+	sg, ok := asStrategyUnaryGCF(child)
+	if !ok {
+		return Range{}, false, nil
+	}
+
+	sqrtS, ok := sg.strategy.(sqrtStrategy)
+	if !ok {
+		return Range{}, false, nil
+	}
+
+	if !unaryLFTEqual(sqrtS.effectivePost(), identityUnaryLFT()) {
+		return Range{}, false, nil
+	}
+
+	xr := sg.child.Range()
+	if !rangeWellFormed(xr) {
+		return Range{}, false, nil
+	}
+	if xr.Outside {
+		return Range{}, false, nil
+	}
+	if !rangeCertainlyNonNegative(xr) {
+		return Range{}, false, nil
+	}
+
+	return xr, true, nil
+}
+
 func asStrategyUnaryGCF(child GCF) (strategyUnaryGCF, bool) {
 	switch c := child.(type) {
 	case strategyUnaryGCF:
@@ -239,4 +268,4 @@ func bigIntEqual(a, b *big.Int) bool {
 	}
 }
 
-// cf/square.go v1
+// cf/square.go v2

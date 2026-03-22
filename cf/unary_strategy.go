@@ -1,4 +1,4 @@
-// cf/unary_strategy.go v5
+// cf/unary_strategy.go v6
 package cf
 
 import (
@@ -23,6 +23,10 @@ type childIngestingUnaryStrategy interface {
 
 type childExactUnaryStrategy interface {
 	ExactFromChild(child GCF) (Rational, bool, error)
+}
+
+type childRangeUnaryStrategy interface {
+	RangeFromChild(child GCF) (Range, bool, error)
 }
 
 type strategyUnaryGCF struct {
@@ -163,6 +167,13 @@ func (g strategyUnaryGCF) Range() Range {
 		}
 	}
 
+	if ranger, ok := g.strategy.(childRangeUnaryStrategy); ok {
+		zr, certified, err := ranger.RangeFromChild(g.child)
+		if err == nil && certified {
+			return zr
+		}
+	}
+
 	zr, err := g.strategy.RangeFromOperand(g.child.Range())
 	if err != nil {
 		return Range{}
@@ -204,4 +215,4 @@ func (g strategyUnaryGCF) Convergent() (Rational, error) {
 	return Rational{}, ErrUndefined
 }
 
-// cf/unary_strategy.go v5
+// cf/unary_strategy.go v6
