@@ -1,4 +1,4 @@
-// cf/unary_strategy.go v2
+// cf/unary_strategy.go v3
 package cf
 
 import (
@@ -11,6 +11,10 @@ type unaryStrategy interface {
 	EmitCandidateFromOperand(xr Range) (*big.Int, bool, error)
 	Emit(term *big.Int) unaryStrategy
 	ExactEval(x Rational) (Rational, bool, error)
+}
+
+type ouroborosUnaryStrategy interface {
+	OuroborosFeedback(xr Range) (Range, *big.Int, unaryStrategy, bool, error)
 }
 
 type strategyUnaryGCF struct {
@@ -33,12 +37,28 @@ func (g strategyUnaryGCF) Next() (RCFTerm, GCF, error) {
 	}
 
 	xr := g.child.Range()
-	q, ok, err := g.strategy.EmitCandidateFromOperand(xr)
-	if err != nil {
-		return RCFTerm{}, g, err
+
+	strategyForEmit := g.strategy
+	var q *big.Int
+	var ok bool
+	var err error
+
+	if ouro, has := g.strategy.(ouroborosUnaryStrategy); has {
+		_, q, strategyForEmit, ok, err = ouro.OuroborosFeedback(xr)
+		if err != nil {
+			return RCFTerm{}, g, err
+		}
 	}
+
 	if !ok {
-		return RCFTerm{}, g, ErrUndefined
+		q, ok, err = g.strategy.EmitCandidateFromOperand(xr)
+		if err != nil {
+			return RCFTerm{}, g, err
+		}
+		if !ok {
+			return RCFTerm{}, g, ErrUndefined
+		}
+		strategyForEmit = g.strategy
 	}
 
 	term := RCFTerm{
@@ -47,7 +67,7 @@ func (g strategyUnaryGCF) Next() (RCFTerm, GCF, error) {
 	}
 
 	if x, exact := exactFiniteRangeValue(xr); exact {
-		z, exactOK, err := g.strategy.ExactEval(x)
+		z, exactOK, err := strategyForEmit.ExactEval(x)
 		if err != nil {
 			return RCFTerm{}, g, err
 		}
@@ -55,7 +75,7 @@ func (g strategyUnaryGCF) Next() (RCFTerm, GCF, error) {
 			_, rem := floorDivModBig(z.Num, z.Den)
 			if rem.Sign() == 0 {
 				return term, strategyUnaryGCF{
-					strategy: g.strategy,
+					strategy: strategyForEmit,
 					child:    g.child,
 					resolved: rcfPrefixGCF{terms: nil, index: 0},
 				}, nil
@@ -64,7 +84,7 @@ func (g strategyUnaryGCF) Next() (RCFTerm, GCF, error) {
 	}
 
 	return term, strategyUnaryGCF{
-		strategy: g.strategy.Emit(q),
+		strategy: strategyForEmit.Emit(q),
 		child:    g.child,
 	}, nil
 }
@@ -115,4 +135,4 @@ func (g strategyUnaryGCF) Convergent() (Rational, error) {
 	return Rational{}, ErrUndefined
 }
 
-// cf/unary_strategy.go v2
+// cf/unary_strategy.go v3

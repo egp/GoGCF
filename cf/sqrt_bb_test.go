@@ -188,5 +188,28 @@ func TestBB_Sqrt_Int64_Two_FirstFourTermsAre_1_2_2_2(t *testing.T) {
 		cur = rest
 	}
 }
+func TestBB_Sqrt_Int64_Two_FirstFiveTermsAre_1_2_2_2_2(t *testing.T) {
+	g := cf.Sqrt(cf.FromSource(cf.Int64(2)))
+
+	want := []string{"1", "2", "2", "2", "2"}
+	cur := g
+	for i, w := range want {
+		term, rest, err := cur.Next()
+		if err != nil {
+			t.Fatalf("Next() #%d error: %v", i+1, err)
+		}
+		if !term.IsValue() {
+			t.Fatalf("term #%d should be a value", i+1)
+		}
+		value, ok := term.BigInt()
+		if !ok {
+			t.Fatalf("term #%d should expose a BigInt", i+1)
+		}
+		if got := value.String(); got != w {
+			t.Fatalf("term #%d = %s, want %s", i+1, got, w)
+		}
+		cur = rest
+	}
+}
 
 // cf/sqrt_bb_test.go v1

@@ -528,6 +528,7 @@ func TestWB_ExactPositiveSqrtNewtonFeedback_ExactTwoWithIdentity_CertifiesOneUsi
 	got, ok, err := exactPositiveSqrtNewtonFeedback(
 		Rational{Num: big.NewInt(2), Den: big.NewInt(1)},
 		identityUnaryLFT(),
+		Rational{},
 	)
 	if err != nil {
 		t.Fatalf("exactPositiveSqrtNewtonFeedback() error: %v", err)
@@ -559,6 +560,7 @@ func TestWB_ExactPositiveSqrtNewtonFeedback_ExactTwoAfterEmitOne_CertifiesTwoUsi
 	got, ok, err := exactPositiveSqrtNewtonFeedback(
 		Rational{Num: big.NewInt(2), Den: big.NewInt(1)},
 		identityUnaryLFT().emit(big.NewInt(1)),
+		Rational{},
 	)
 	if err != nil {
 		t.Fatalf("exactPositiveSqrtNewtonFeedback() error: %v", err)
@@ -590,6 +592,7 @@ func TestWB_ExactPositiveSqrtNewtonFeedback_ExactTwoAfterEmitOneTwo_CertifiesTwo
 	got, ok, err := exactPositiveSqrtNewtonFeedback(
 		Rational{Num: big.NewInt(2), Den: big.NewInt(1)},
 		identityUnaryLFT().emit(big.NewInt(1)).emit(big.NewInt(2)),
+		Rational{},
 	)
 	if err != nil {
 		t.Fatalf("exactPositiveSqrtNewtonFeedback() error: %v", err)
@@ -615,6 +618,66 @@ func TestWB_ExactPositiveSqrtNewtonFeedback_ExactTwoAfterEmitOneTwo_CertifiesTwo
 	if got.ImageRange.Lo.Closed || got.ImageRange.Hi.Closed {
 		t.Fatalf("post-emit image range should stay open")
 	}
+}
+
+func TestWB_SqrtStrategy_Emit_PreservesCachedUpperBound(t *testing.T) {
+	s := sqrtStrategy{
+		post:  identityUnaryLFT(),
+		upper: Rational{Num: big.NewInt(17), Den: big.NewInt(12)},
+	}
+
+	next, ok := s.Emit(big.NewInt(2)).(sqrtStrategy)
+	if !ok {
+		t.Fatalf("Emit() should return sqrtStrategy")
+	}
+
+	assertBigIntString(t, "next.upper.Num", next.upper.Num, "17")
+	assertBigIntString(t, "next.upper.Den", next.upper.Den, "12")
+}
+
+func TestWB_ExactPositiveSqrtNewtonFeedback_ExactTwoAfterEmitOneTwoTwo_CertifiesTwoUsingUpperFiveHundredSeventySevenOverFourHundredEight(t *testing.T) {
+	got, ok, err := exactPositiveSqrtNewtonFeedback(
+		Rational{Num: big.NewInt(2), Den: big.NewInt(1)},
+		identityUnaryLFT().emit(big.NewInt(1)).emit(big.NewInt(2)).emit(big.NewInt(2)),
+		Rational{Num: big.NewInt(17), Den: big.NewInt(12)},
+	)
+	if err != nil {
+		t.Fatalf("exactPositiveSqrtNewtonFeedback() error: %v", err)
+	}
+	if !ok {
+		t.Fatalf("exactPositiveSqrtNewtonFeedback() should succeed")
+	}
+	if got.Candidate == nil {
+		t.Fatalf("candidate should be non-nil")
+	}
+
+	assertBigIntString(t, "got.Candidate", got.Candidate, "2")
+	assertBigIntString(t, "got.UpperBound.Num", got.UpperBound.Num, "577")
+	assertBigIntString(t, "got.UpperBound.Den", got.UpperBound.Den, "408")
+}
+
+func TestWB_SqrtStrategy_EmitCandidateFromOperand_ExactTwoAfterEmitOneTwoTwo_CertifiesTwo(t *testing.T) {
+	s := sqrtStrategy{
+		post:  identityUnaryLFT().emit(big.NewInt(1)).emit(big.NewInt(2)).emit(big.NewInt(2)),
+		upper: Rational{Num: big.NewInt(17), Den: big.NewInt(12)},
+	}
+
+	xr := exactRangeFromRational(Rational{
+		Num: big.NewInt(2),
+		Den: big.NewInt(1),
+	})
+
+	q, ok, err := s.EmitCandidateFromOperand(xr)
+	if err != nil {
+		t.Fatalf("EmitCandidateFromOperand() error: %v", err)
+	}
+	if !ok {
+		t.Fatalf("EmitCandidateFromOperand() should certify an output term")
+	}
+
+	assertBigIntString(t, "q", q, "2")
+	assertBigIntString(t, "s.upper.Num", s.upper.Num, "17")
+	assertBigIntString(t, "s.upper.Den", s.upper.Den, "12")
 }
 
 // cf/sqrt_wb_test.go v1

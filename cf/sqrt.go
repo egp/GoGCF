@@ -1,10 +1,11 @@
-// cf/sqrt.go v5
+// cf/sqrt.go v6
 package cf
 
 import "math/big"
 
 type sqrtStrategy struct {
-	post unaryLFT
+	post  unaryLFT
+	upper Rational
 }
 
 func Sqrt(x GCF) GCF {
@@ -21,6 +22,41 @@ func (s sqrtStrategy) effectivePost() unaryLFT {
 	return s.post
 }
 
+func (s sqrtStrategy) OuroborosFeedback(xr Range) (Range, *big.Int, unaryStrategy, bool, error) {
+	x, exact := exactFiniteRangeValue(xr)
+	if !exact {
+		return Range{}, nil, s, false, nil
+	}
+
+	xrNorm, err := normalizedRational(x)
+	if err != nil {
+		return Range{}, nil, s, false, err
+	}
+	if xrNorm.Num.Sign() < 0 {
+		return Range{}, nil, s, false, ErrUndefined
+	}
+
+	if _, ok, err := exactSqrtRational(xrNorm); err != nil {
+		return Range{}, nil, s, false, err
+	} else if ok {
+		return Range{}, nil, s, false, nil
+	}
+
+	got, ok, err := exactPositiveSqrtNewtonFeedback(xrNorm, s.effectivePost(), s.upper)
+	if err != nil {
+		return Range{}, nil, s, false, err
+	}
+	if !ok {
+		return Range{}, nil, s, false, nil
+	}
+
+	next := sqrtStrategy{
+		post:  s.effectivePost(),
+		upper: got.UpperBound,
+	}
+	return got.ImageRange, got.Candidate, next, true, nil
+}
+
 func (s sqrtStrategy) RangeFromOperand(xr Range) (Range, error) {
 	post := s.effectivePost()
 
@@ -34,7 +70,7 @@ func (s sqrtStrategy) RangeFromOperand(xr Range) (Range, error) {
 			return exactRangeFromRational(r), nil
 		}
 
-		zr, ok, err := exactPositiveSqrtImageEnclosure(x, post)
+		zr, ok, err := exactPositiveSqrtImageEnclosure(x, post, s.upper)
 		if err != nil {
 			return Range{}, err
 		}
@@ -131,7 +167,8 @@ func (s sqrtStrategy) EmitCandidateFromOperand(xr Range) (*big.Int, bool, error)
 
 func (s sqrtStrategy) Emit(term *big.Int) unaryStrategy {
 	return sqrtStrategy{
-		post: s.effectivePost().emit(term),
+		post:  s.effectivePost().emit(term),
+		upper: s.upper,
 	}
 }
 
@@ -188,7 +225,7 @@ func exactSqrtRational(x Rational) (Rational, bool, error) {
 	return r, true, nil
 }
 
-func exactPositiveSqrtImageEnclosure(x Rational, post unaryLFT) (Range, bool, error) {
+func exactPositiveSqrtImageEnclosure(x Rational, post unaryLFT, seedUpper Rational) (Range, bool, error) {
 	xr, err := normalizedRational(x)
 	if err != nil {
 		return Range{}, false, err
@@ -207,7 +244,7 @@ func exactPositiveSqrtImageEnclosure(x Rational, post unaryLFT) (Range, bool, er
 		return exactRangeFromRational(r), true, nil
 	}
 
-	got, ok, err := exactPositiveSqrtNewtonFeedback(xr, post)
+	got, ok, err := exactPositiveSqrtNewtonFeedback(xr, post, seedUpper)
 	if err != nil {
 		return Range{}, false, err
 	}
@@ -249,4 +286,4 @@ func ceilBigIntSqrt(n *big.Int) *big.Int {
 	return new(big.Int).Add(floor, big.NewInt(1))
 }
 
-// cf/sqrt.go v5
+// cf/sqrt.go v6
