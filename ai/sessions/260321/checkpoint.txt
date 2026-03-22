@@ -24,5 +24,4 @@ Immediate next step:
 Constraint/invariant:
 - correctness first, immutable stepping, no floating fallback in exact modes, TDD red/green workflow.
 Next chat:
-- Ask for current MasterPlan.md and update only incorrect/missing parts.
-- Work only from files/errors the user pastes next.
+- update the PublicAPI.md where needed

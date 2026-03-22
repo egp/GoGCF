@@ -58,26 +58,8 @@ func (s sqrtStrategy) OuroborosFeedback(xr Range) (Range, *big.Int, unaryStrateg
 }
 
 func (s sqrtStrategy) RangeFromOperand(xr Range) (Range, error) {
-	post := s.effectivePost()
-
-	x, exact := exactFiniteRangeValue(xr)
-	if exact {
-		r, ok, err := s.ExactEval(x)
-		if err != nil {
-			return Range{}, err
-		}
-		if ok {
-			return exactRangeFromRational(r), nil
-		}
-
-		zr, ok, err := exactPositiveSqrtImageEnclosure(x, post, s.upper)
-		if err != nil {
-			return Range{}, err
-		}
-		if ok {
-			return zr, nil
-		}
-		return Range{}, nil
+	if x, exact := exactFiniteRangeValue(xr); exact {
+		return s.rangeFromExactOperand(x)
 	}
 
 	if rangeCertainlyNegative(xr) {
@@ -92,49 +74,7 @@ func (s sqrtStrategy) RangeFromOperand(xr Range) (Range, error) {
 		return Range{}, nil
 	}
 
-	loRoot, loExact, err := exactSqrtRational(xLo)
-	if err != nil {
-		return Range{}, err
-	}
-	hiRoot, hiExact, err := exactSqrtRational(xHi)
-	if err != nil {
-		return Range{}, err
-	}
-
-	if loExact && hiExact {
-		base := Range{
-			Lo: Bound{
-				Kind:   BoundFinite,
-				Value:  loRoot,
-				Closed: xr.Lo.Closed,
-			},
-			Hi: Bound{
-				Kind:   BoundFinite,
-				Value:  hiRoot,
-				Closed: xr.Hi.Closed,
-			},
-			Outside: false,
-		}
-		return post.rangeFromXRange(base)
-	}
-
-	loImg, loOK, err := exactPositiveSqrtImageEnclosure(xLo, post, Rational{})
-	if err != nil {
-		return Range{}, err
-	}
-	hiImg, hiOK, err := exactPositiveSqrtImageEnclosure(xHi, post, Rational{})
-	if err != nil {
-		return Range{}, err
-	}
-	if !loOK || !hiOK {
-		return Range{}, nil
-	}
-
-	zr, ok := combineConservativeEndpointImageRanges(loImg, hiImg)
-	if !ok {
-		return Range{}, nil
-	}
-	return zr, nil
+	return s.rangeFromFinitePositiveInterval(xLo, xHi, xr.Lo.Closed, xr.Hi.Closed)
 }
 
 func (s sqrtStrategy) EmitCandidateFromOperand(xr Range) (*big.Int, bool, error) {
@@ -298,84 +238,6 @@ func ceilBigIntSqrt(n *big.Int) *big.Int {
 	return new(big.Int).Add(floor, big.NewInt(1))
 }
 
-// func sqrtLowerEndpointBound(x Rational, closed bool) (Bound, error) {
-// 	if root, ok, err := exactSqrtRational(x); err != nil {
-// 		return Bound{}, err
-// 	} else if ok {
-// 		return Bound{
-// 			Kind:   BoundFinite,
-// 			Value:  root,
-// 			Closed: closed,
-// 		}, nil
-// 	}
-
-// 	zr, err := exactPositiveSqrtEnclosure(x)
-// 	if err != nil {
-// 		return Bound{}, err
-// 	}
-// 	if !rangeWellFormed(zr) || zr.Outside || zr.Lo.Kind != BoundFinite {
-// 		return Bound{}, ErrUndefined
-// 	}
-
-// 	return Bound{
-// 		Kind:   BoundFinite,
-// 		Value:  zr.Lo.Value,
-// 		Closed: false,
-// 	}, nil
-// }
-
-// func sqrtUpperEndpointBound(x Rational, closed bool) (Bound, error) {
-// 	if root, ok, err := exactSqrtRational(x); err != nil {
-// 		return Bound{}, err
-// 	} else if ok {
-// 		return Bound{
-// 			Kind:   BoundFinite,
-// 			Value:  root,
-// 			Closed: closed,
-// 		}, nil
-// 	}
-
-// 	zr, err := exactPositiveSqrtEnclosure(x)
-// 	if err != nil {
-// 		return Bound{}, err
-// 	}
-// 	if !rangeWellFormed(zr) || zr.Outside || zr.Hi.Kind != BoundFinite {
-// 		return Bound{}, ErrUndefined
-// 	}
-
-// 	return Bound{
-// 		Kind:   BoundFinite,
-// 		Value:  zr.Hi.Value,
-// 		Closed: false,
-// 	}, nil
-// }
-
-// func exactPositiveSqrtEnclosure(x Rational) (Range, error) {
-// 	xr, err := normalizedRational(x)
-// 	if err != nil {
-// 		return Range{}, err
-// 	}
-// 	if xr.Num.Sign() < 0 {
-// 		return Range{}, ErrUndefined
-// 	}
-
-// 	if root, ok, err := exactSqrtRational(xr); err != nil {
-// 		return Range{}, err
-// 	} else if ok {
-// 		return exactRangeFromRational(root), nil
-// 	}
-
-// 	upper, err := normalizedRational(Rational{
-// 		Num: ceilBigIntSqrt(xr.Num),
-// 		Den: floorBigIntSqrt(xr.Den),
-// 	})
-// 	if err != nil {
-// 		return Range{}, err
-// 	}
-
-// 	return sqrtEnclosureFromUpperBound(xr, upper)
-// }
-
 func combineConservativeEndpointImageRanges(a, b Range) (Range, bool) {
 	if !rangeWellFormed(a) || !rangeWellFormed(b) {
 		return Range{}, false
@@ -392,13 +254,23 @@ func combineConservativeEndpointImageRanges(a, b Range) (Range, bool) {
 	}
 
 	lo := a.Lo.Value
-	if rationalCmp(b.Lo.Value, lo) < 0 {
+	loClosed := a.Lo.Closed
+	switch cmp := rationalCmp(b.Lo.Value, lo); {
+	case cmp < 0:
 		lo = b.Lo.Value
+		loClosed = b.Lo.Closed
+	case cmp == 0:
+		loClosed = loClosed || b.Lo.Closed
 	}
 
 	hi := a.Hi.Value
-	if rationalCmp(b.Hi.Value, hi) > 0 {
+	hiClosed := a.Hi.Closed
+	switch cmp := rationalCmp(b.Hi.Value, hi); {
+	case cmp > 0:
 		hi = b.Hi.Value
+		hiClosed = b.Hi.Closed
+	case cmp == 0:
+		hiClosed = hiClosed || b.Hi.Closed
 	}
 
 	loN, err := normalizedRational(lo)
@@ -414,15 +286,122 @@ func combineConservativeEndpointImageRanges(a, b Range) (Range, bool) {
 		Lo: Bound{
 			Kind:   BoundFinite,
 			Value:  loN,
-			Closed: false,
+			Closed: loClosed,
 		},
 		Hi: Bound{
 			Kind:   BoundFinite,
 			Value:  hiN,
-			Closed: false,
+			Closed: hiClosed,
 		},
 		Outside: false,
 	}, true
+}
+
+func sqrtEndpointImageRangeForInterval(x Rational, post unaryLFT) (Range, bool, error) {
+	xr, err := normalizedRational(x)
+	if err != nil {
+		return Range{}, false, err
+	}
+	if xr.Num.Sign() < 0 {
+		return Range{}, false, ErrUndefined
+	}
+
+	if root, ok, err := exactSqrtRational(xr); err != nil {
+		return Range{}, false, err
+	} else if ok {
+		r, err := post.evalAt(root)
+		if err != nil {
+			if err == ErrUndefined {
+				return Range{}, false, nil
+			}
+			return Range{}, false, err
+		}
+		return exactRangeFromRational(r), true, nil
+	}
+
+	got, ok, err := exactPositiveSqrtNewtonFeedback(xr, post, Rational{})
+	if err != nil {
+		if err == ErrUndefined {
+			return Range{}, false, nil
+		}
+		return Range{}, false, err
+	}
+	if !ok {
+		return Range{}, false, nil
+	}
+
+	return got.ImageRange, true, nil
+}
+func (s sqrtStrategy) rangeFromFinitePositiveInterval(xLo, xHi Rational, loClosed, hiClosed bool) (Range, error) {
+	post := s.effectivePost()
+
+	loRoot, loExact, err := exactSqrtRational(xLo)
+	if err != nil {
+		return Range{}, err
+	}
+	hiRoot, hiExact, err := exactSqrtRational(xHi)
+	if err != nil {
+		return Range{}, err
+	}
+
+	if loExact && hiExact {
+		base := Range{
+			Lo: Bound{
+				Kind:   BoundFinite,
+				Value:  loRoot,
+				Closed: loClosed,
+			},
+			Hi: Bound{
+				Kind:   BoundFinite,
+				Value:  hiRoot,
+				Closed: hiClosed,
+			},
+			Outside: false,
+		}
+		return post.rangeFromXRange(base)
+	}
+
+	loImg, loOK, err := sqrtEndpointImageRangeForInterval(xLo, post)
+	if err != nil {
+		return Range{}, err
+	}
+
+	hiImg, hiOK, err := sqrtEndpointImageRangeForInterval(xHi, post)
+	if err != nil {
+		return Range{}, err
+	}
+
+	if !loOK || !hiOK {
+		return Range{}, nil
+	}
+
+	zr, ok := combineConservativeEndpointImageRanges(loImg, hiImg)
+	if !ok {
+		return Range{}, nil
+	}
+	return zr, nil
+}
+
+func (s sqrtStrategy) rangeFromExactOperand(x Rational) (Range, error) {
+	post := s.effectivePost()
+
+	r, ok, err := s.ExactEval(x)
+	if err != nil {
+		return Range{}, err
+	}
+	if ok {
+		return exactRangeFromRational(r), nil
+	}
+
+	zr, ok, err := exactPositiveSqrtImageEnclosure(x, post, s.upper)
+	if err != nil {
+		return Range{}, err
+	}
+	if ok {
+		return zr, nil
+	}
+
+	return Range{}, nil
 }
 
 // cf/sqrt.go v6
