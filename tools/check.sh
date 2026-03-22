@@ -29,14 +29,14 @@ staticcheck ./cfsource
 
 
 print -P "%F{cyan}==> tests (no cache)%f"
-go test -count=1 ./cf
-go test -count=1 ./cfsource
+go test -count=9 ./cf
+go test -count=9 ./cfsource
 
 
 print -P "%F{cyan}==> coverage summary%f"
 mkdir -p ./tmp
-go test -count=1 -coverprofile=./tmp/cover.out ./cf
-go test -count=1 -coverprofile=./tmp/cover.out ./cfsource
+go test -count=9 -coverprofile=./tmp/cover_cf.out ./cf
+go test -count=9 -coverprofile=./tmp/cover_cfsource.out ./cfsource
 
 print -P "%F{green}OK%f"
 # tools/check.zsh v2

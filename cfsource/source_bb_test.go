@@ -1,15 +1,16 @@
-// cf/source_bb_test.go v1
-package cf_test
+// cfsource/source_bb_test.go v1
+package cfsource_test
 
 import (
 	"io"
 	"testing"
 
 	"github.com/egp/GoGCF/cf"
+	"github.com/egp/GoGCF/cfsource"
 )
 
 func TestBB_Int64_SourceEmitsSinglePQValueThenEOF(t *testing.T) {
-	src := cf.Int64(7)
+	src := cfsource.Int64(7)
 
 	first, rest, err := src.NextPQ()
 	if err != nil {
@@ -38,7 +39,7 @@ func TestBB_Int64_SourceEmitsSinglePQValueThenEOF(t *testing.T) {
 }
 
 func TestBB_FromSource_Int64_FirstNextEmitsRCFValue(t *testing.T) {
-	g := cf.FromSource(cf.Int64(7))
+	g := cf.FromSource(cfsource.Int64(7))
 
 	term, _, err := g.Next()
 	if err != nil {
@@ -57,7 +58,7 @@ func TestBB_FromSource_Int64_FirstNextEmitsRCFValue(t *testing.T) {
 }
 
 func TestBB_FromSource_Int64_SecondNextEmitsEOF(t *testing.T) {
-	g := cf.FromSource(cf.Int64(7))
+	g := cf.FromSource(cfsource.Int64(7))
 
 	_, rest, err := g.Next()
 	if err != nil {
@@ -74,7 +75,7 @@ func TestBB_FromSource_Int64_SecondNextEmitsEOF(t *testing.T) {
 }
 
 func TestBB_FromSource_Int64_TakeOneReturnsFinitePrefix(t *testing.T) {
-	g := cf.FromSource(cf.Int64(7))
+	g := cf.FromSource(cfsource.Int64(7))
 
 	prefix, err := g.Take(1)
 	if err != nil {
@@ -106,7 +107,7 @@ func TestBB_FromSource_Int64_TakeOneReturnsFinitePrefix(t *testing.T) {
 }
 
 func TestBB_FromSource_Int64_TakeThreeReturnsEOFAndShortFinitePrefix(t *testing.T) {
-	g := cf.FromSource(cf.Int64(7))
+	g := cf.FromSource(cfsource.Int64(7))
 
 	prefix, err := g.Take(3)
 	if err != io.EOF {
@@ -137,44 +138,8 @@ func TestBB_FromSource_Int64_TakeThreeReturnsEOFAndShortFinitePrefix(t *testing.
 	}
 }
 
-func TestBB_FromSource_Sqrt2_TakeThreeReturnsFinitePrefix_1_2_2(t *testing.T) {
-	g := cf.FromSource(cf.Sqrt2())
-
-	prefix, err := g.Take(3)
-	if err != nil {
-		t.Fatalf("Take(3) error: %v", err)
-	}
-
-	want := []string{"1", "2", "2"}
-	cur := prefix
-	for i, w := range want {
-		term, rest, err := cur.Next()
-		if err != nil {
-			t.Fatalf("prefix Next() #%d error: %v", i+1, err)
-		}
-		if !term.IsValue() {
-			t.Fatalf("prefix term #%d should be a value", i+1)
-		}
-		value, ok := term.BigInt()
-		if !ok {
-			t.Fatalf("prefix term #%d should expose a BigInt", i+1)
-		}
-		if got := value.String(); got != w {
-			t.Fatalf("prefix term #%d = %s, want %s", i+1, got, w)
-		}
-		cur = rest
-	}
-
-	term4, _, err := cur.Next()
-	if err != nil {
-		t.Fatalf("prefix final Next() error: %v", err)
-	}
-	if !term4.IsEOF() {
-		t.Fatalf("prefix final term should be EOF")
-	}
-}
 func TestBB_FromSource_Int64_TakeOne_ConvergentIsSevenOverOne(t *testing.T) {
-	g := cf.FromSource(cf.Int64(7))
+	g := cf.FromSource(cfsource.Int64(7))
 
 	prefix, err := g.Take(1)
 	if err != nil {
@@ -197,31 +162,8 @@ func TestBB_FromSource_Int64_TakeOne_ConvergentIsSevenOverOne(t *testing.T) {
 	}
 }
 
-func TestBB_FromSource_Sqrt2_TakeThree_ConvergentIsSevenOverFive(t *testing.T) {
-	g := cf.FromSource(cf.Sqrt2())
-
-	prefix, err := g.Take(3)
-	if err != nil {
-		t.Fatalf("Take(3) error: %v", err)
-	}
-
-	r, err := prefix.Convergent()
-	if err != nil {
-		t.Fatalf("Convergent() error: %v", err)
-	}
-
-	if r.Num == nil || r.Den == nil {
-		t.Fatalf("Convergent() should return non-nil numerator and denominator")
-	}
-	if got, want := r.Num.String(), "7"; got != want {
-		t.Fatalf("numerator = %s, want %s", got, want)
-	}
-	if got, want := r.Den.String(), "5"; got != want {
-		t.Fatalf("denominator = %s, want %s", got, want)
-	}
-}
 func TestBB_Rat64_SourceEmitsRCFTerms_1_2_2_ThenEOF(t *testing.T) {
-	src := cf.Rat64(7, 5)
+	src := cfsource.Rat64(7, 5)
 
 	want := []string{"1", "2", "2"}
 	cur := src
@@ -255,7 +197,7 @@ func TestBB_Rat64_SourceEmitsRCFTerms_1_2_2_ThenEOF(t *testing.T) {
 }
 
 func TestBB_FromSource_Rat64_FirstThreeNextsEmit_1_2_2(t *testing.T) {
-	g := cf.FromSource(cf.Rat64(7, 5))
+	g := cf.FromSource(cfsource.Rat64(7, 5))
 
 	want := []string{"1", "2", "2"}
 	cur := g
@@ -287,7 +229,7 @@ func TestBB_FromSource_Rat64_FirstThreeNextsEmit_1_2_2(t *testing.T) {
 }
 
 func TestBB_FromSource_Rat64_RangeIsExactPoint(t *testing.T) {
-	g := cf.FromSource(cf.Rat64(7, 5))
+	g := cf.FromSource(cfsource.Rat64(7, 5))
 
 	r := g.Range()
 
@@ -314,5 +256,3 @@ func TestBB_FromSource_Rat64_RangeIsExactPoint(t *testing.T) {
 		t.Fatalf("hi denominator = %s, want %s", got, want)
 	}
 }
-
-// cf/source_bb_test.go v1

@@ -1,4 +1,4 @@
-// cfsource/source.go v1
+// cfsource/source.go v2
 package cfsource
 
 import (
@@ -163,3 +163,5 @@ func floorDivInt64(n, d int64) int64 {
 	}
 	return q
 }
+
+// EOF cfsource/source.go v2

@@ -1,5 +1,5 @@
-// cf/sqrt2_source_wb_test.go v1
-package cf
+// cfsource/sqrt2_source_wb_test.go v1
+package cfsource
 
 import "testing"
 
@@ -62,5 +62,3 @@ func TestWB_Sqrt2_ConcreteStateProgressesByIndex(t *testing.T) {
 		t.Fatalf("original source mutated: index = %d, want 0", s0.index)
 	}
 }
-
-// cf/sqrt2_source_wb_test.go v1

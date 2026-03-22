@@ -1,4 +1,4 @@
-// cf/source.go v8
+// cf/source.go v10
 package cf
 
 import (
@@ -20,6 +20,10 @@ type rat64Source struct {
 	index int
 	num   int64
 	den   int64
+}
+
+type rangedGCFSource interface {
+	CurrentRange() Range
 }
 
 func Int64(v int64) GCFSource {
@@ -49,6 +53,13 @@ func (s int64Source) NextPQ() (PQTerm, GCFSource, error) {
 	return term, int64Source{value: s.value, emitted: true}, nil
 }
 
+func (s int64Source) CurrentRange() Range {
+	if !s.emitted {
+		return exactInt64Range(s.value)
+	}
+	return Range{}
+}
+
 func (s rat64Source) NextPQ() (PQTerm, GCFSource, error) {
 	if s.index >= len(s.terms) {
 		return PQTerm{Kind: PQEOF}, s, nil
@@ -66,6 +77,18 @@ func (s rat64Source) NextPQ() (PQTerm, GCFSource, error) {
 		num:   s.num,
 		den:   s.den,
 	}, nil
+}
+
+func (s rat64Source) CurrentRange() Range {
+	if s.index >= len(s.terms) {
+		return Range{}
+	}
+
+	r, err := convergentFromTerms(s.terms, s.index)
+	if err != nil {
+		return Range{}
+	}
+	return exactRangeFromRational(r)
 }
 
 type sourceBackedGCF struct {
@@ -103,71 +126,13 @@ func (g sourceBackedGCF) Next() (RCFTerm, GCF, error) {
 		Value: new(big.Int).Set(pq.Q),
 	}, sourceBackedGCF{src: rest}, nil
 }
+
 func (g sourceBackedGCF) Range() Range {
-	switch src := g.src.(type) {
-	case int64Source:
-		if !src.emitted {
-			return exactInt64Range(src.value)
-		}
-
-	case rat64Source:
-		if src.index < len(src.terms) {
-			prefix := rcfPrefixGCF{
-				terms: src.terms,
-				index: src.index,
-			}
-			r, err := prefix.Convergent()
-			if err == nil {
-				return exactRangeFromRational(r)
-			}
-		}
-
-	case sqrt2Source:
-		switch src.index {
-		case 0:
-			return Range{
-				Lo: Bound{
-					Kind: BoundFinite,
-					Value: Rational{
-						Num: big.NewInt(1),
-						Den: big.NewInt(1),
-					},
-					Closed: false,
-				},
-				Hi: Bound{
-					Kind: BoundFinite,
-					Value: Rational{
-						Num: big.NewInt(3),
-						Den: big.NewInt(2),
-					},
-					Closed: false,
-				},
-				Outside: false,
-			}
-		default:
-			return Range{
-				Lo: Bound{
-					Kind: BoundFinite,
-					Value: Rational{
-						Num: big.NewInt(2),
-						Den: big.NewInt(1),
-					},
-					Closed: false,
-				},
-				Hi: Bound{
-					Kind: BoundFinite,
-					Value: Rational{
-						Num: big.NewInt(5),
-						Den: big.NewInt(2),
-					},
-					Closed: false,
-				},
-				Outside: false,
-			}
-		}
+	src, ok := g.src.(rangedGCFSource)
+	if !ok {
+		return Range{}
 	}
-
-	return Range{}
+	return src.CurrentRange()
 }
 
 func (g sourceBackedGCF) Take(n int) (GCF, error) {
@@ -256,17 +221,20 @@ func (g rcfPrefixGCF) Take(n int) (GCF, error) {
 }
 
 func (g rcfPrefixGCF) Convergent() (Rational, error) {
-	if g.index >= len(g.terms) {
+	return convergentFromTerms(g.terms, g.index)
+}
+
+func convergentFromTerms(terms []*big.Int, index int) (Rational, error) {
+	if index < 0 || index >= len(terms) {
 		return Rational{}, ErrUndefined
 	}
 
-	num := new(big.Int).Set(g.terms[len(g.terms)-1])
+	num := new(big.Int).Set(terms[len(terms)-1])
 	den := big.NewInt(1)
 
-	for i := len(g.terms) - 2; i >= g.index; i-- {
-		nextNum := new(big.Int).Mul(g.terms[i], num)
+	for i := len(terms) - 2; i >= index; i-- {
+		nextNum := new(big.Int).Mul(terms[i], num)
 		nextNum.Add(nextNum, den)
-
 		num, den = nextNum, num
 	}
 
@@ -343,4 +311,4 @@ func floorDivInt64(n, d int64) int64 {
 	return q
 }
 
-// cf/source.go v8
+// EOF cf/source.go v10
