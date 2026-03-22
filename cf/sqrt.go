@@ -92,33 +92,18 @@ func (s sqrtStrategy) RangeFromOperand(xr Range) (Range, error) {
 		return Range{}, nil
 	}
 
-	lo, okLo, err := exactSqrtRational(xLo)
+	loBound, err := sqrtLowerEndpointBound(xLo, xr.Lo.Closed)
 	if err != nil {
 		return Range{}, err
 	}
-	if !okLo {
-		return Range{}, nil
-	}
-
-	hi, okHi, err := exactSqrtRational(xHi)
+	hiBound, err := sqrtUpperEndpointBound(xHi, xr.Hi.Closed)
 	if err != nil {
 		return Range{}, err
-	}
-	if !okHi {
-		return Range{}, nil
 	}
 
 	base := Range{
-		Lo: Bound{
-			Kind:   BoundFinite,
-			Value:  lo,
-			Closed: xr.Lo.Closed,
-		},
-		Hi: Bound{
-			Kind:   BoundFinite,
-			Value:  hi,
-			Closed: xr.Hi.Closed,
-		},
+		Lo:      loBound,
+		Hi:      hiBound,
 		Outside: false,
 	}
 
@@ -284,6 +269,84 @@ func ceilBigIntSqrt(n *big.Int) *big.Int {
 		return floor
 	}
 	return new(big.Int).Add(floor, big.NewInt(1))
+}
+
+func sqrtLowerEndpointBound(x Rational, closed bool) (Bound, error) {
+	if root, ok, err := exactSqrtRational(x); err != nil {
+		return Bound{}, err
+	} else if ok {
+		return Bound{
+			Kind:   BoundFinite,
+			Value:  root,
+			Closed: closed,
+		}, nil
+	}
+
+	zr, err := exactPositiveSqrtEnclosure(x)
+	if err != nil {
+		return Bound{}, err
+	}
+	if !rangeWellFormed(zr) || zr.Outside || zr.Lo.Kind != BoundFinite {
+		return Bound{}, ErrUndefined
+	}
+
+	return Bound{
+		Kind:   BoundFinite,
+		Value:  zr.Lo.Value,
+		Closed: false,
+	}, nil
+}
+
+func sqrtUpperEndpointBound(x Rational, closed bool) (Bound, error) {
+	if root, ok, err := exactSqrtRational(x); err != nil {
+		return Bound{}, err
+	} else if ok {
+		return Bound{
+			Kind:   BoundFinite,
+			Value:  root,
+			Closed: closed,
+		}, nil
+	}
+
+	zr, err := exactPositiveSqrtEnclosure(x)
+	if err != nil {
+		return Bound{}, err
+	}
+	if !rangeWellFormed(zr) || zr.Outside || zr.Hi.Kind != BoundFinite {
+		return Bound{}, ErrUndefined
+	}
+
+	return Bound{
+		Kind:   BoundFinite,
+		Value:  zr.Hi.Value,
+		Closed: false,
+	}, nil
+}
+
+func exactPositiveSqrtEnclosure(x Rational) (Range, error) {
+	xr, err := normalizedRational(x)
+	if err != nil {
+		return Range{}, err
+	}
+	if xr.Num.Sign() < 0 {
+		return Range{}, ErrUndefined
+	}
+
+	if root, ok, err := exactSqrtRational(xr); err != nil {
+		return Range{}, err
+	} else if ok {
+		return exactRangeFromRational(root), nil
+	}
+
+	upper, err := normalizedRational(Rational{
+		Num: ceilBigIntSqrt(xr.Num),
+		Den: floorBigIntSqrt(xr.Den),
+	})
+	if err != nil {
+		return Range{}, err
+	}
+
+	return sqrtEnclosureFromUpperBound(xr, upper)
 }
 
 // cf/sqrt.go v6
