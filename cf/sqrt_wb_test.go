@@ -820,5 +820,133 @@ func TestWB_StrategyUnaryGCF_WithSqrtStrategy_ClosedTwoToThree_EmitsOne(t *testi
 		t.Fatalf("first term = %s, want %s", got, want)
 	}
 }
+func TestWB_SqrtStrategy_RangeFromOperand_ClosedTwoToNineOverFourAfterEmitOne_IsInsideTwoToThree(t *testing.T) {
+	s := sqrtStrategy{
+		post: identityUnaryLFT().emit(big.NewInt(1)),
+	}
+
+	xr := Range{
+		Lo: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(2),
+				Den: big.NewInt(1),
+			},
+			Closed: true,
+		},
+		Hi: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(9),
+				Den: big.NewInt(4),
+			},
+			Closed: true,
+		},
+		Outside: false,
+	}
+
+	zr, err := s.RangeFromOperand(xr)
+	if err != nil {
+		t.Fatalf("RangeFromOperand() error: %v", err)
+	}
+	if zr.IsExact() {
+		t.Fatalf("RangeFromOperand() should not be exact")
+	}
+	if zr.Outside {
+		t.Fatalf("RangeFromOperand() should return an inside range")
+	}
+
+	assertBigIntString(t, "zr.Lo.Value.Num", zr.Lo.Value.Num, "2")
+	assertBigIntString(t, "zr.Lo.Value.Den", zr.Lo.Value.Den, "1")
+	assertBigIntString(t, "zr.Hi.Value.Num", zr.Hi.Value.Num, "3")
+	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "1")
+	if zr.Lo.Closed || zr.Hi.Closed {
+		t.Fatalf("post-emit interval should stay open")
+	}
+}
+
+func TestWB_SqrtStrategy_EmitCandidateFromOperand_ClosedTwoToNineOverFourAfterEmitOne_CertifiesTwo(t *testing.T) {
+	s := sqrtStrategy{
+		post: identityUnaryLFT().emit(big.NewInt(1)),
+	}
+
+	xr := Range{
+		Lo: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(2),
+				Den: big.NewInt(1),
+			},
+			Closed: true,
+		},
+		Hi: Bound{
+			Kind: BoundFinite,
+			Value: Rational{
+				Num: big.NewInt(9),
+				Den: big.NewInt(4),
+			},
+			Closed: true,
+		},
+		Outside: false,
+	}
+
+	q, ok, err := s.EmitCandidateFromOperand(xr)
+	if err != nil {
+		t.Fatalf("EmitCandidateFromOperand() error: %v", err)
+	}
+	if !ok {
+		t.Fatalf("EmitCandidateFromOperand() should certify an output term")
+	}
+
+	assertBigIntString(t, "q", q, "2")
+}
+
+func TestWB_StrategyUnaryGCF_WithSqrtStrategy_ClosedTwoToNineOverFour_FirstTwoTermsAre_1_2(t *testing.T) {
+	g := strategyUnaryGCF{
+		strategy: sqrtStrategy{},
+		child: scriptedRangeGCF{
+			term: RCFTerm{Kind: RCFValue, Value: big.NewInt(99)},
+			r: Range{
+				Lo: Bound{
+					Kind: BoundFinite,
+					Value: Rational{
+						Num: big.NewInt(2),
+						Den: big.NewInt(1),
+					},
+					Closed: true,
+				},
+				Hi: Bound{
+					Kind: BoundFinite,
+					Value: Rational{
+						Num: big.NewInt(9),
+						Den: big.NewInt(4),
+					},
+					Closed: true,
+				},
+				Outside: false,
+			},
+		},
+	}
+
+	want := []string{"1", "2"}
+	cur := GCF(g)
+	for i, w := range want {
+		term, rest, err := cur.Next()
+		if err != nil {
+			t.Fatalf("Next() #%d error: %v", i+1, err)
+		}
+		if !term.IsValue() {
+			t.Fatalf("term #%d should be a value", i+1)
+		}
+		value, ok := term.BigInt()
+		if !ok {
+			t.Fatalf("term #%d should expose a BigInt", i+1)
+		}
+		if got := value.String(); got != w {
+			t.Fatalf("term #%d = %s, want %s", i+1, got, w)
+		}
+		cur = rest
+	}
+}
 
 // cf/sqrt_wb_test.go v1
