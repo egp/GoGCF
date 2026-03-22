@@ -733,4 +733,121 @@ func TestWB_StrategyUnaryGCF_WithSqrtStrategy_OpenFiveHundredSeventySixOverTwoHu
 	}
 }
 
+func TestWB_StrategyUnaryGCF_WithSqrtStrategy_ClosedOneThousandSixHundredEightyOneOverEightHundredFortyOneToOpenThreeThousandThreeHundredSixtyFourOverOneThousandSixHundredEightyOne_FirstFiveTermsAre_1_2_2_2_2(t *testing.T) {
+	g := strategyUnaryGCF{
+		strategy: sqrtStrategy{},
+		child: scriptedRangeGCF{
+			term: RCFTerm{Kind: RCFValue, Value: big.NewInt(99)},
+			r: Range{
+				Lo: Bound{
+					Kind: BoundFinite,
+					Value: Rational{
+						Num: big.NewInt(1681),
+						Den: big.NewInt(841),
+					},
+					Closed: true,
+				},
+				Hi: Bound{
+					Kind: BoundFinite,
+					Value: Rational{
+						Num: big.NewInt(3364),
+						Den: big.NewInt(1681),
+					},
+					Closed: false,
+				},
+				Outside: false,
+			},
+		},
+	}
+
+	want := []string{"1", "2", "2", "2", "2"}
+	cur := GCF(g)
+	for i, w := range want {
+		term, rest, err := cur.Next()
+		if err != nil {
+			t.Fatalf("Next() #%d error: %v", i+1, err)
+		}
+		if !term.IsValue() {
+			t.Fatalf("term #%d should be a value", i+1)
+		}
+		value, ok := term.BigInt()
+		if !ok {
+			t.Fatalf("term #%d should expose a BigInt", i+1)
+		}
+		if got := value.String(); got != w {
+			t.Fatalf("term #%d = %s, want %s", i+1, got, w)
+		}
+		cur = rest
+	}
+}
+
+func TestWB_StrategyUnaryGCF_WithSqrtStrategy_ClosedOneThousandSixHundredEightyOneOverEightHundredFortyOneToOpenThreeThousandThreeHundredSixtyFourOverOneThousandSixHundredEightyOne_AfterFourTermsLeavesClosedTwoToOpenThreeRemainder(t *testing.T) {
+	g := strategyUnaryGCF{
+		strategy: sqrtStrategy{},
+		child: scriptedRangeGCF{
+			term: RCFTerm{Kind: RCFValue, Value: big.NewInt(99)},
+			r: Range{
+				Lo: Bound{
+					Kind: BoundFinite,
+					Value: Rational{
+						Num: big.NewInt(1681),
+						Den: big.NewInt(841),
+					},
+					Closed: true,
+				},
+				Hi: Bound{
+					Kind: BoundFinite,
+					Value: Rational{
+						Num: big.NewInt(3364),
+						Den: big.NewInt(1681),
+					},
+					Closed: false,
+				},
+				Outside: false,
+			},
+		},
+	}
+
+	cur := GCF(g)
+	for i, w := range []string{"1", "2", "2", "2"} {
+		term, rest, err := cur.Next()
+		if err != nil {
+			t.Fatalf("Next() #%d error: %v", i+1, err)
+		}
+		if !term.IsValue() {
+			t.Fatalf("term #%d should be a value", i+1)
+		}
+		value, ok := term.BigInt()
+		if !ok {
+			t.Fatalf("term #%d should expose a BigInt", i+1)
+		}
+		if got := value.String(); got != w {
+			t.Fatalf("term #%d = %s, want %s", i+1, got, w)
+		}
+		cur = rest
+	}
+
+	zr := cur.Range()
+	if !rangeWellFormed(zr) {
+		t.Fatalf("remainder Range() should be well formed")
+	}
+	if zr.IsExact() {
+		t.Fatalf("remainder Range() should not be exact")
+	}
+	if zr.Outside {
+		t.Fatalf("remainder Range() should return an inside range")
+	}
+
+	assertBigIntString(t, "zr.Lo.Value.Num", zr.Lo.Value.Num, "2")
+	assertBigIntString(t, "zr.Lo.Value.Den", zr.Lo.Value.Den, "1")
+	assertBigIntString(t, "zr.Hi.Value.Num", zr.Hi.Value.Num, "3")
+	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "1")
+	if !zr.Lo.Closed {
+		t.Fatalf("lower endpoint 2 should be closed because sqrt(1681/841)=41/29 is included")
+	}
+	if zr.Hi.Closed {
+		t.Fatalf("upper endpoint 3 should be open because sqrt(3364/1681)=58/41 is excluded")
+	}
+}
+
 // cf/sqrt_strategy_integration_wb_test.go v1

@@ -1,24 +1,28 @@
-// cf/sqrt2_source.go v3
-package cf
+// cfsource/sqrt2.go v1
+package cfsource
 
-import "math/big"
+import (
+	"math/big"
+
+	"github.com/egp/GoGCF/cf"
+)
 
 type sqrt2Source struct {
 	index int
 }
 
-func Sqrt2() GCFSource {
+func Sqrt2() cf.GCFSource {
 	return sqrt2Source{index: 0}
 }
 
-func (s sqrt2Source) NextPQ() (PQTerm, GCFSource, error) {
+func (s sqrt2Source) NextPQ() (cf.PQTerm, cf.GCFSource, error) {
 	q := int64(2)
 	if s.index == 0 {
 		q = 1
 	}
 
-	term := PQTerm{
-		Kind: PQValue,
+	term := cf.PQTerm{
+		Kind: cf.PQValue,
 		P:    big.NewInt(1),
 		Q:    big.NewInt(q),
 	}
@@ -26,21 +30,21 @@ func (s sqrt2Source) NextPQ() (PQTerm, GCFSource, error) {
 	return term, sqrt2Source{index: s.index + 1}, nil
 }
 
-func (s sqrt2Source) CurrentRange() Range {
+func (s sqrt2Source) CurrentRange() cf.Range {
 	switch s.index {
 	case 0:
-		return Range{
-			Lo: Bound{
-				Kind: BoundFinite,
-				Value: Rational{
+		return cf.Range{
+			Lo: cf.Bound{
+				Kind: cf.BoundFinite,
+				Value: cf.Rational{
 					Num: big.NewInt(1),
 					Den: big.NewInt(1),
 				},
 				Closed: false,
 			},
-			Hi: Bound{
-				Kind: BoundFinite,
-				Value: Rational{
+			Hi: cf.Bound{
+				Kind: cf.BoundFinite,
+				Value: cf.Rational{
 					Num: big.NewInt(3),
 					Den: big.NewInt(2),
 				},
@@ -49,18 +53,18 @@ func (s sqrt2Source) CurrentRange() Range {
 			Outside: false,
 		}
 	default:
-		return Range{
-			Lo: Bound{
-				Kind: BoundFinite,
-				Value: Rational{
+		return cf.Range{
+			Lo: cf.Bound{
+				Kind: cf.BoundFinite,
+				Value: cf.Rational{
 					Num: big.NewInt(2),
 					Den: big.NewInt(1),
 				},
 				Closed: false,
 			},
-			Hi: Bound{
-				Kind: BoundFinite,
-				Value: Rational{
+			Hi: cf.Bound{
+				Kind: cf.BoundFinite,
+				Value: cf.Rational{
 					Num: big.NewInt(5),
 					Den: big.NewInt(2),
 				},
@@ -70,5 +74,3 @@ func (s sqrt2Source) CurrentRange() Range {
 		}
 	}
 }
-
-// cf/sqrt2_source.go v3

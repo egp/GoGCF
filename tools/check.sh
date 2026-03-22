@@ -21,20 +21,22 @@ fi
 
 print -P "%F{cyan}==> go vet%f"
 go vet ./cf
+go vet ./cfsource
 
 print -P "%F{cyan}==> staticcheck%f"
 staticcheck ./cf
+staticcheck ./cfsource
+
 
 print -P "%F{cyan}==> tests (no cache)%f"
 go test -count=1 ./cf
+go test -count=1 ./cfsource
+
 
 print -P "%F{cyan}==> coverage summary%f"
 mkdir -p ./tmp
 go test -count=1 -coverprofile=./tmp/cover.out ./cf
-
-#### don't run this normally ######
-# go test -run '^$' -fuzz FuzzULFTStreamMatchesExactRationalImage -fuzztime 30s ./cf
-###################################
+go test -count=1 -coverprofile=./tmp/cover.out ./cfsource
 
 print -P "%F{green}OK%f"
 # tools/check.zsh v2
