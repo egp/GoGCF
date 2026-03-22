@@ -163,7 +163,7 @@ func (s squareStrategy) EmitCandidateFromOperand(xr Range) (*big.Int, bool, erro
 }
 
 func (s squareStrategy) Emit(term *big.Int) unaryStrategy {
-	return diagLFTStrategy{op: s.effectiveOp().emit(term)}
+	return squareStrategy{op: s.effectiveOp().emit(term)}
 }
 
 func (s squareStrategy) ExactEval(x Rational) (Rational, bool, error) {
@@ -178,63 +178,11 @@ func (s squareStrategy) ExactFromChild(child GCF) (Rational, bool, error) {
 	if x, exact := exactFiniteRangeValue(child.Range()); exact {
 		return s.ExactEval(x)
 	}
-
-	sg, ok := asStrategyUnaryGCF(child)
-	if !ok {
-		return Rational{}, false, nil
-	}
-
-	sqrtS, ok := sg.strategy.(sqrtStrategy)
-	if !ok {
-		return Rational{}, false, nil
-	}
-
-	if !unaryLFTEqual(sqrtS.effectivePost(), identityUnaryLFT()) {
-		return Rational{}, false, nil
-	}
-
-	x, exact := exactFiniteRangeValue(sg.child.Range())
-	if !exact {
-		return Rational{}, false, nil
-	}
-	if x.Num.Sign() < 0 {
-		return Rational{}, false, ErrUndefined
-	}
-
-	r, err := normalizedRational(x)
-	if err != nil {
-		return Rational{}, false, err
-	}
-	return r, true, nil
+	return Rational{}, false, nil
 }
 
 func (s squareStrategy) RangeFromChild(child GCF) (Range, bool, error) {
-	sg, ok := asStrategyUnaryGCF(child)
-	if !ok {
-		return Range{}, false, nil
-	}
-
-	sqrtS, ok := sg.strategy.(sqrtStrategy)
-	if !ok {
-		return Range{}, false, nil
-	}
-
-	if !unaryLFTEqual(sqrtS.effectivePost(), identityUnaryLFT()) {
-		return Range{}, false, nil
-	}
-
-	xr := sg.child.Range()
-	if !rangeWellFormed(xr) {
-		return Range{}, false, nil
-	}
-	if xr.Outside {
-		return Range{}, false, nil
-	}
-	if !rangeCertainlyNonNegative(xr) {
-		return Range{}, false, nil
-	}
-
-	return xr, true, nil
+	return Range{}, false, nil
 }
 
 func asStrategyUnaryGCF(child GCF) (strategyUnaryGCF, bool) {

@@ -36,6 +36,10 @@ type strategyUnaryGCF struct {
 }
 
 func (g strategyUnaryGCF) Next() (RCFTerm, GCF, error) {
+	if collapsed, ok := g.collapsedSquareOfSqrt(); ok {
+		return collapsed.Next()
+	}
+
 	if g.resolved != nil {
 		term, rest, err := g.resolved.Next()
 		if err != nil {
@@ -72,12 +76,14 @@ func (g strategyUnaryGCF) Next() (RCFTerm, GCF, error) {
 
 	cur := g
 	for {
-		xr := cur.child.Range()
+		xr, err := cur.operandRangeForStrategy()
+		if err != nil {
+			return RCFTerm{}, g, err
+		}
 
 		strategyForEmit := cur.strategy
 		var q *big.Int
 		var ok bool
-		var err error
 
 		if ouro, has := cur.strategy.(ouroborosUnaryStrategy); has {
 			_, q, strategyForEmit, ok, err = ouro.OuroborosFeedback(xr)
@@ -156,6 +162,10 @@ func (g strategyUnaryGCF) Next() (RCFTerm, GCF, error) {
 }
 
 func (g strategyUnaryGCF) Range() Range {
+	if collapsed, ok := g.collapsedSquareOfSqrt(); ok {
+		return collapsed.Range()
+	}
+
 	if g.resolved != nil {
 		return g.resolved.Range()
 	}
@@ -213,6 +223,62 @@ func (g strategyUnaryGCF) Take(n int) (GCF, error) {
 
 func (g strategyUnaryGCF) Convergent() (Rational, error) {
 	return Rational{}, ErrUndefined
+}
+
+func (g strategyUnaryGCF) operandRangeForStrategy() (Range, error) {
+	if ranger, ok := g.strategy.(childRangeUnaryStrategy); ok {
+		zr, certified, err := ranger.RangeFromChild(g.child)
+		if err != nil {
+			return Range{}, err
+		}
+		if certified {
+			return zr, nil
+		}
+	}
+
+	return g.child.Range(), nil
+}
+
+func (g strategyUnaryGCF) collapsedSquareOfSqrt() (strategyUnaryGCF, bool) {
+	squareS, ok := g.strategy.(squareStrategy)
+	if !ok {
+		return strategyUnaryGCF{}, false
+	}
+	if !diagLFTEqual(squareS.effectiveOp(), squareDiagLFT()) {
+		return strategyUnaryGCF{}, false
+	}
+
+	childSG, ok := asStrategyUnaryGCF(g.child)
+	if !ok {
+		return strategyUnaryGCF{}, false
+	}
+
+	sqrtS, ok := childSG.strategy.(sqrtStrategy)
+	if !ok {
+		return strategyUnaryGCF{}, false
+	}
+	if !unaryLFTEqual(sqrtS.effectivePost(), identityUnaryLFT()) {
+		return strategyUnaryGCF{}, false
+	}
+
+	xr := childSG.child.Range()
+	if !rangeWellFormed(xr) || xr.Outside || !rangeCertainlyNonNegative(xr) {
+		return strategyUnaryGCF{}, false
+	}
+
+	return strategyUnaryGCF{
+		strategy: unaryLFTStrategy{op: identityUnaryLFT()},
+		child:    childSG.child,
+	}, true
+}
+
+func diagLFTEqual(a, b diagLFT) bool {
+	return bigIntEqual(a.a, b.a) &&
+		bigIntEqual(a.b, b.b) &&
+		bigIntEqual(a.c, b.c) &&
+		bigIntEqual(a.d, b.d) &&
+		bigIntEqual(a.e, b.e) &&
+		bigIntEqual(a.f, b.f)
 }
 
 // cf/unary_strategy.go v6

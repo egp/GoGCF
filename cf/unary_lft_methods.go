@@ -63,32 +63,75 @@ func (u unaryLFT) rangeFromXRange(xr Range) (Range, error) {
 		return Range{}, nil
 	}
 
-	values := make([]Rational, 0, 2)
-	for _, x := range []Rational{xLo, xHi} {
-		v, err := u.evalAt(x)
-		if err != nil {
-			continue
-		}
-		values = append(values, v)
+	type endpointImage struct {
+		value  Rational
+		closed bool
 	}
 
-	if len(values) == 0 {
+	images := make([]endpointImage, 0, 2)
+
+	if v, err := u.evalAt(xLo); err == nil {
+		images = append(images, endpointImage{
+			value:  v,
+			closed: xr.Lo.Closed,
+		})
+	}
+	if v, err := u.evalAt(xHi); err == nil {
+		images = append(images, endpointImage{
+			value:  v,
+			closed: xr.Hi.Closed,
+		})
+	}
+
+	if len(images) == 0 {
 		return Range{}, nil
 	}
 
-	lo := values[0]
-	hi := values[0]
-	for _, v := range values[1:] {
-		if rationalCmp(v, lo) < 0 {
-			lo = v
+	lo := images[0].value
+	loClosed := images[0].closed
+	hi := images[0].value
+	hiClosed := images[0].closed
+
+	for _, img := range images[1:] {
+		switch cmp := rationalCmp(img.value, lo); {
+		case cmp < 0:
+			lo = img.value
+			loClosed = img.closed
+		case cmp == 0:
+			loClosed = loClosed || img.closed
 		}
-		if rationalCmp(v, hi) > 0 {
-			hi = v
+
+		switch cmp := rationalCmp(img.value, hi); {
+		case cmp > 0:
+			hi = img.value
+			hiClosed = img.closed
+		case cmp == 0:
+			hiClosed = hiClosed || img.closed
 		}
 	}
 
-	allClosed := xr.Lo.Closed && xr.Hi.Closed
-	return finiteInsideRange(lo, hi, allClosed), nil
+	loN, err := normalizedRational(lo)
+	if err != nil {
+		return Range{}, err
+	}
+	hiN, err := normalizedRational(hi)
+	if err != nil {
+		return Range{}, err
+	}
+
+	return Range{
+		Lo: Bound{
+			Kind:   BoundFinite,
+			Value:  loN,
+			Closed: loClosed,
+		},
+		Hi: Bound{
+			Kind:   BoundFinite,
+			Value:  hiN,
+			Closed: hiClosed,
+		},
+		Outside: false,
+	}, nil
 }
 
 func (u unaryLFT) emitCandidateFromRange(xr Range) (*big.Int, bool, error) {

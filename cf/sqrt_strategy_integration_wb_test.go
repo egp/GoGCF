@@ -276,4 +276,265 @@ func TestWB_SquareOfSqrt_Range_OnClosedOneToTwo_PreservesOriginalInterval(t *tes
 	}
 }
 
+func TestWB_SquareOfSqrt_Next_OnClosedThreeHalvesToSevenQuarters_EmitsOne(t *testing.T) {
+	x := scriptedRangeGCF{
+		term: RCFTerm{Kind: RCFValue, Value: big.NewInt(99)},
+		r: Range{
+			Lo: Bound{
+				Kind: BoundFinite,
+				Value: Rational{
+					Num: big.NewInt(3),
+					Den: big.NewInt(2),
+				},
+				Closed: true,
+			},
+			Hi: Bound{
+				Kind: BoundFinite,
+				Value: Rational{
+					Num: big.NewInt(7),
+					Den: big.NewInt(4),
+				},
+				Closed: true,
+			},
+			Outside: false,
+		},
+	}
+
+	g := Square(Sqrt(x))
+
+	term, _, err := g.Next()
+	if err != nil {
+		t.Fatalf("Next() error: %v", err)
+	}
+	if !term.IsValue() {
+		t.Fatalf("first term should be a value")
+	}
+	value, ok := term.BigInt()
+	if !ok {
+		t.Fatalf("first term should expose a BigInt")
+	}
+	if got, want := value.String(), "1"; got != want {
+		t.Fatalf("first term = %s, want %s", got, want)
+	}
+}
+
+func TestWB_SquareOfSqrt_Next_OnClosedThreeHalvesToSevenQuarters_LeavesClosedFourThirdsToTwoRemainder(t *testing.T) {
+	x := scriptedRangeGCF{
+		term: RCFTerm{Kind: RCFValue, Value: big.NewInt(99)},
+		r: Range{
+			Lo: Bound{
+				Kind: BoundFinite,
+				Value: Rational{
+					Num: big.NewInt(3),
+					Den: big.NewInt(2),
+				},
+				Closed: true,
+			},
+			Hi: Bound{
+				Kind: BoundFinite,
+				Value: Rational{
+					Num: big.NewInt(7),
+					Den: big.NewInt(4),
+				},
+				Closed: true,
+			},
+			Outside: false,
+		},
+	}
+
+	g := Square(Sqrt(x))
+
+	term, rest, err := g.Next()
+	if err != nil {
+		t.Fatalf("Next() error: %v", err)
+	}
+	if !term.IsValue() {
+		t.Fatalf("first term should be a value")
+	}
+	value, ok := term.BigInt()
+	if !ok {
+		t.Fatalf("first term should expose a BigInt")
+	}
+	if got, want := value.String(), "1"; got != want {
+		t.Fatalf("first term = %s, want %s", got, want)
+	}
+
+	zr := rest.Range()
+	if !rangeWellFormed(zr) {
+		t.Fatalf("remainder Range() should be well formed")
+	}
+	if zr.IsExact() {
+		t.Fatalf("remainder Range() should not be exact")
+	}
+	if zr.Outside {
+		t.Fatalf("remainder Range() should return an inside range")
+	}
+
+	assertBigIntString(t, "zr.Lo.Value.Num", zr.Lo.Value.Num, "4")
+	assertBigIntString(t, "zr.Lo.Value.Den", zr.Lo.Value.Den, "3")
+	assertBigIntString(t, "zr.Hi.Value.Num", zr.Hi.Value.Num, "2")
+	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "1")
+	if !zr.Lo.Closed || !zr.Hi.Closed {
+		t.Fatalf("remainder of [3/2,7/4] after emitting 1 should be the closed interval [4/3,2]")
+	}
+}
+
+func TestWB_SquareOfSqrt_Next_OnOpenFourThirdsToClosedThreeHalves_FirstTwoTermsAre_1_2(t *testing.T) {
+	x := scriptedRangeGCF{
+		term: RCFTerm{Kind: RCFValue, Value: big.NewInt(99)},
+		r: Range{
+			Lo: Bound{
+				Kind: BoundFinite,
+				Value: Rational{
+					Num: big.NewInt(4),
+					Den: big.NewInt(3),
+				},
+				Closed: false,
+			},
+			Hi: Bound{
+				Kind: BoundFinite,
+				Value: Rational{
+					Num: big.NewInt(3),
+					Den: big.NewInt(2),
+				},
+				Closed: true,
+			},
+			Outside: false,
+		},
+	}
+
+	g := Square(Sqrt(x))
+
+	want := []string{"1", "2"}
+	cur := g
+	for i, w := range want {
+		term, rest, err := cur.Next()
+		if err != nil {
+			t.Fatalf("Next() #%d error: %v", i+1, err)
+		}
+		if !term.IsValue() {
+			t.Fatalf("term #%d should be a value", i+1)
+		}
+		value, ok := term.BigInt()
+		if !ok {
+			t.Fatalf("term #%d should expose a BigInt", i+1)
+		}
+		if got := value.String(); got != w {
+			t.Fatalf("term #%d = %s, want %s", i+1, got, w)
+		}
+		cur = rest
+	}
+}
+
+func TestWB_SquareOfSqrt_Next_OnOpenFourThirdsToClosedThreeHalves_LeavesClosedTwoToOpenThreeRemainder(t *testing.T) {
+	x := scriptedRangeGCF{
+		term: RCFTerm{Kind: RCFValue, Value: big.NewInt(99)},
+		r: Range{
+			Lo: Bound{
+				Kind: BoundFinite,
+				Value: Rational{
+					Num: big.NewInt(4),
+					Den: big.NewInt(3),
+				},
+				Closed: false,
+			},
+			Hi: Bound{
+				Kind: BoundFinite,
+				Value: Rational{
+					Num: big.NewInt(3),
+					Den: big.NewInt(2),
+				},
+				Closed: true,
+			},
+			Outside: false,
+		},
+	}
+
+	g := Square(Sqrt(x))
+
+	term, rest, err := g.Next()
+	if err != nil {
+		t.Fatalf("Next() error: %v", err)
+	}
+	if !term.IsValue() {
+		t.Fatalf("first term should be a value")
+	}
+	value, ok := term.BigInt()
+	if !ok {
+		t.Fatalf("first term should expose a BigInt")
+	}
+	if got, want := value.String(), "1"; got != want {
+		t.Fatalf("first term = %s, want %s", got, want)
+	}
+
+	zr := rest.Range()
+	if !rangeWellFormed(zr) {
+		t.Fatalf("remainder Range() should be well formed")
+	}
+	if zr.IsExact() {
+		t.Fatalf("remainder Range() should not be exact")
+	}
+	if zr.Outside {
+		t.Fatalf("remainder Range() should return an inside range")
+	}
+
+	assertBigIntString(t, "zr.Lo.Value.Num", zr.Lo.Value.Num, "2")
+	assertBigIntString(t, "zr.Lo.Value.Den", zr.Lo.Value.Den, "1")
+	assertBigIntString(t, "zr.Hi.Value.Num", zr.Hi.Value.Num, "3")
+	assertBigIntString(t, "zr.Hi.Value.Den", zr.Hi.Value.Den, "1")
+	if !zr.Lo.Closed {
+		t.Fatalf("lower endpoint 2 should be closed because x=3/2 is included")
+	}
+	if zr.Hi.Closed {
+		t.Fatalf("upper endpoint 3 should be open because x=4/3 is excluded")
+	}
+}
+
+func TestWB_SquareOfSqrt_Next_OnClosedSevenFifthsToOpenTenSevenths_FirstThreeTermsAre_1_2_2(t *testing.T) {
+	x := scriptedRangeGCF{
+		term: RCFTerm{Kind: RCFValue, Value: big.NewInt(99)},
+		r: Range{
+			Lo: Bound{
+				Kind: BoundFinite,
+				Value: Rational{
+					Num: big.NewInt(7),
+					Den: big.NewInt(5),
+				},
+				Closed: true,
+			},
+			Hi: Bound{
+				Kind: BoundFinite,
+				Value: Rational{
+					Num: big.NewInt(10),
+					Den: big.NewInt(7),
+				},
+				Closed: false,
+			},
+			Outside: false,
+		},
+	}
+
+	g := Square(Sqrt(x))
+
+	want := []string{"1", "2", "2"}
+	cur := g
+	for i, w := range want {
+		term, rest, err := cur.Next()
+		if err != nil {
+			t.Fatalf("Next() #%d error: %v", i+1, err)
+		}
+		if !term.IsValue() {
+			t.Fatalf("term #%d should be a value", i+1)
+		}
+		value, ok := term.BigInt()
+		if !ok {
+			t.Fatalf("term #%d should expose a BigInt", i+1)
+		}
+		if got := value.String(); got != w {
+			t.Fatalf("term #%d = %s, want %s", i+1, got, w)
+		}
+		cur = rest
+	}
+}
+
 // cf/sqrt_strategy_integration_wb_test.go v1
