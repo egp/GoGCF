@@ -1,4 +1,4 @@
-// cf/source.go v11
+// cf/source.go v12
 package cf
 
 import (
@@ -92,7 +92,10 @@ func (s rat64Source) CurrentRange() Range {
 }
 
 type sourceBackedGCF struct {
-	src GCFSource
+	src      GCFSource
+	op       unaryLFT
+	started  bool
+	resolved GCF
 }
 
 type rcfPrefixGCF struct {
@@ -101,38 +104,160 @@ type rcfPrefixGCF struct {
 }
 
 func FromSource(src GCFSource) GCF {
-	return sourceBackedGCF{src: src}
+	return sourceBackedGCF{
+		src:     src,
+		op:      identityUnaryLFT(),
+		started: false,
+	}
+}
+func (g sourceBackedGCF) Next() (RCFTerm, GCF, error) {
+	if g.resolved != nil {
+		term, rest, err := g.resolved.Next()
+		if err != nil {
+			return RCFTerm{}, g, err
+		}
+		return term, sourceBackedGCF{
+			src:      g.src,
+			op:       g.op,
+			started:  g.started,
+			resolved: rest,
+		}, nil
+	}
+
+	cur := g
+	for {
+		if cur.started {
+			resolved, ok, err := cur.resolveFromCurrentExactRange()
+			if err != nil {
+				return RCFTerm{}, cur, err
+			}
+			if ok {
+				term, nextResolved, err := resolved.Next()
+				if err != nil {
+					return RCFTerm{}, cur, err
+				}
+				return term, sourceBackedGCF{
+					src:      cur.src,
+					op:       cur.op,
+					started:  true,
+					resolved: nextResolved,
+				}, nil
+			}
+
+			value, ok, err := cur.emitCandidateFromCurrentRange()
+			if err != nil {
+				return RCFTerm{}, cur, err
+			}
+			if ok {
+				return RCFTerm{
+						Kind:  RCFValue,
+						Value: value,
+					},
+					sourceBackedGCF{
+						src:     cur.src,
+						op:      cur.op.emit(value),
+						started: true,
+					},
+					nil
+			}
+		}
+
+		pq, rest, err := cur.src.NextPQ()
+		if err != nil {
+			return RCFTerm{}, cur, err
+		}
+
+		if pq.IsEOF() {
+			if !cur.started {
+				return RCFTerm{Kind: RCFEOF}, sourceBackedGCF{src: rest}, nil
+			}
+
+			prefix, err := cur.collapseEOFToPrefix()
+			if err != nil {
+				return RCFTerm{}, cur, err
+			}
+
+			term, nextResolved, err := prefix.Next()
+			if err != nil {
+				return RCFTerm{}, cur, err
+			}
+
+			return term, sourceBackedGCF{
+				src:      rest,
+				op:       cur.op,
+				started:  true,
+				resolved: nextResolved,
+			}, nil
+		}
+
+		if pq.P == nil || pq.Q == nil {
+			return RCFTerm{}, cur, ErrUndefined
+		}
+
+		cur = sourceBackedGCF{
+			src:     rest,
+			op:      cur.op.ingestPQ(pq.P, pq.Q),
+			started: true,
+		}
+	}
 }
 
-func (g sourceBackedGCF) Next() (RCFTerm, GCF, error) {
-	pq, rest, err := g.src.NextPQ()
+func (g sourceBackedGCF) resolveFromCurrentExactRange() (GCF, bool, error) {
+	src, ok := g.src.(rangedGCFSource)
+	if !ok {
+		return nil, false, nil
+	}
+
+	x, ok := exactFiniteRangeValue(src.CurrentRange())
+	if !ok {
+		return nil, false, nil
+	}
+
+	r, err := g.op.evalAt(x)
 	if err != nil {
-		return RCFTerm{}, g, err
+		return nil, false, err
 	}
 
-	if pq.IsEOF() {
-		return RCFTerm{Kind: RCFEOF}, sourceBackedGCF{src: rest}, nil
+	prefix, err := prefixGCFfromRational(r)
+	if err != nil {
+		return nil, false, err
 	}
 
-	if pq.P == nil || pq.Q == nil {
-		return RCFTerm{}, g, ErrUndefined
-	}
-	if pq.P.Cmp(big.NewInt(1)) != 0 {
-		return RCFTerm{}, g, ErrUndefined
+	return prefix, true, nil
+}
+
+func (g sourceBackedGCF) emitCandidateFromCurrentRange() (*big.Int, bool, error) {
+	src, ok := g.src.(rangedGCFSource)
+	if !ok {
+		return nil, false, nil
 	}
 
-	return RCFTerm{
-		Kind:  RCFValue,
-		Value: new(big.Int).Set(pq.Q),
-	}, sourceBackedGCF{src: rest}, nil
+	return g.op.emitCandidateFromRange(src.CurrentRange())
+}
+
+func (g sourceBackedGCF) collapseEOFToPrefix() (GCF, error) {
+	r, err := g.op.collapseEOFToRational()
+	if err != nil {
+		return nil, err
+	}
+	return prefixGCFfromRational(r)
 }
 
 func (g sourceBackedGCF) Range() Range {
+	if g.resolved != nil {
+		return g.resolved.Range()
+	}
+
 	src, ok := g.src.(rangedGCFSource)
 	if !ok {
 		return Range{}
 	}
-	return src.CurrentRange()
+
+	r, err := g.op.rangeFromXRange(src.CurrentRange())
+	if err != nil {
+		return Range{}
+	}
+	return r
 }
 
 func (g sourceBackedGCF) Take(n int) (GCF, error) {
@@ -254,4 +379,4 @@ func exactRationalRange(num, den int64) Range {
 	}
 }
 
-// EOF cf/source.go v11
+// cf/source.go v12

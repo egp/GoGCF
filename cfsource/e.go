@@ -1,4 +1,4 @@
-// cfsource/e.go v1
+// cfsource/e.go v2
 package cfsource
 
 import (
@@ -15,17 +15,20 @@ func E() cf.GCFSource {
 	return eSource{index: 0}
 }
 
-func (s eSource) NextPQ() (cf.PQTerm, cf.GCFSource, error) {
-	var q int64
+func (s eSource) currentQ() int64 {
 	switch {
 	case s.index == 0:
-		q = 2
+		return 2
 	case s.index%3 == 2:
 		k := int64((s.index + 1) / 3)
-		q = 2 * k
+		return 2 * k
 	default:
-		q = 1
+		return 1
 	}
+}
+
+func (s eSource) NextPQ() (cf.PQTerm, cf.GCFSource, error) {
+	q := s.currentQ()
 
 	term := cf.PQTerm{
 		Kind: cf.PQValue,
@@ -37,48 +40,27 @@ func (s eSource) NextPQ() (cf.PQTerm, cf.GCFSource, error) {
 }
 
 func (s eSource) CurrentRange() cf.Range {
-	switch s.index {
-	case 0:
-		return cf.Range{
-			Lo: cf.Bound{
-				Kind: cf.BoundFinite,
-				Value: cf.Rational{
-					Num: big.NewInt(2),
-					Den: big.NewInt(1),
-				},
-				Closed: false,
+	q := s.currentQ()
+
+	return cf.Range{
+		Lo: cf.Bound{
+			Kind: cf.BoundFinite,
+			Value: cf.Rational{
+				Num: big.NewInt(q),
+				Den: big.NewInt(1),
 			},
-			Hi: cf.Bound{
-				Kind: cf.BoundFinite,
-				Value: cf.Rational{
-					Num: big.NewInt(3),
-					Den: big.NewInt(1),
-				},
-				Closed: false,
+			Closed: false,
+		},
+		Hi: cf.Bound{
+			Kind: cf.BoundFinite,
+			Value: cf.Rational{
+				Num: big.NewInt(q + 1),
+				Den: big.NewInt(1),
 			},
-			Outside: false,
-		}
-	default:
-		return cf.Range{
-			Lo: cf.Bound{
-				Kind: cf.BoundFinite,
-				Value: cf.Rational{
-					Num: big.NewInt(1),
-					Den: big.NewInt(1),
-				},
-				Closed: false,
-			},
-			Hi: cf.Bound{
-				Kind: cf.BoundFinite,
-				Value: cf.Rational{
-					Num: big.NewInt(2),
-					Den: big.NewInt(1),
-				},
-				Closed: false,
-			},
-			Outside: false,
-		}
+			Closed: false,
+		},
+		Outside: false,
 	}
 }
 
-// EOF cfsource/e.go v1
+// cfsource/e.go v2

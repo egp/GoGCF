@@ -1,19 +1,26 @@
-// cf/unary_child_ingest.go v1
+// cf/unary_child_ingest.go v2
 package cf
 
 import "math/big"
+
+func (u unaryLFT) ingestPQ(p, q *big.Int) unaryLFT {
+	if p == nil || q == nil {
+		return u
+	}
+
+	return unaryLFT{
+		a: addMul(u.a, q, u.b),
+		b: mul(u.a, p),
+		c: addMul(u.c, q, u.d),
+		d: mul(u.c, p),
+	}
+}
 
 func (u unaryLFT) ingest(term *big.Int) unaryLFT {
 	if term == nil {
 		return u
 	}
-
-	return unaryLFT{
-		a: addMul(u.a, term, u.b),
-		b: new(big.Int).Set(u.a),
-		c: addMul(u.c, term, u.d),
-		d: new(big.Int).Set(u.c),
-	}
+	return u.ingestPQ(big.NewInt(1), term)
 }
 
 func (d diagLFT) ingest(term *big.Int) diagLFT {
@@ -34,4 +41,4 @@ func (d diagLFT) ingest(term *big.Int) diagLFT {
 	}
 }
 
-// cf/unary_child_ingest.go v1
+// cf/unary_child_ingest.go v2
