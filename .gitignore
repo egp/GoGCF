@@ -1,22 +1,59 @@
 # .gitignore v1
+
 # Binaries
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-
-# Test binaries and coverage
 *.test
 *.out
-coverage.out
+
+# Build output
+/bin/
+/dist/
+/build/
 
 # Dependency directories
 vendor/
 
-# Editor / OS noise
-.DS_Store
-.idea/
+# Go workspace
+go.work
+go.work.sum
+
+# Test / temp artifacts
+*.tmp
+*.temp
+/tmp/
+/tmp-*/
+*.log
+
+# Bench / fuzz leftovers
+testdata/fuzz/Fuzz*
+crashers/
+
+# Editors / IDEs
 .vscode/
+.idea/
+*.iml
+
+# Vim
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+
+# Do not ignore:
+# - go.mod
+# - go.sum
+# - vendor/   (unless you intentionally decide to stop vendoring)
 
 # .gitignore v1
