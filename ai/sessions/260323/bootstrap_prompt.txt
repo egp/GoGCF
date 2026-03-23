@@ -1,0 +1,16 @@
+You are continuing GoGCF, a Go continued-fraction arithmetic library focused on mathematically correct, immutable, testable evaluation in Gosper/HAKMEM style.
+
+State capsule:
+- Core sinks/operators are regular-CF based; GCF.Next() must remain regular (RCFTerm output only).
+- GCFSource is generalized and emits (p,q) PQ terms.
+- Concrete sources now live in companion package cfsource: Int64, Rat64, Sqrt2, E().
+- sqrt is in decent shape and is no longer the primary blocker.
+- Top current blocker: FromSource still rejects PQ terms with P != 1.
+- A prior attempt to generalize FromSource caused hangs and was reverted.
+- Architectural decision: keep GCF regular, GCFSource generalized, and make FromSource the only generalized->regular adapter.
+
+Do not assume any context beyond what I paste next.
+Work only from files, tests, and errors I provide next.
+Use compact, rigorous pair-programming style.
+Prefer red/green TDD and exact, copy/paste-ready complete file replacements when practical.
+If you are unsure about current code, ask me to paste the exact current files before proposing a fix.

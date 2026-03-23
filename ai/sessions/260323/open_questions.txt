@@ -1,0 +1,4 @@
+- What is the exact correct stepping/state invariant for generalized (p,q) ingestion in FromSource so hangs are impossible?
+- Which ingest points must become generalized beyond FromSource itself (ULFT/diagLFT helpers, and possibly any other raw-source ingestion path)?
+- After generalized FromSource works, should Pi be implemented first via Lambert/Gauss arctan family, or via a different source family better matched to current architecture?
+- When generalized sources are enabled, what minimal source-range contract (CurrentRange or equivalent) is required for online emission from infinite generalized sources?

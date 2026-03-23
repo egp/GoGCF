@@ -1,0 +1,16 @@
+First task for the next chat:
+Remove the P==1 restriction correctly at the source adapter boundary.
+
+Exact target:
+- generalized finite source with PQ terms (1,1), (2,3) should adapt through FromSource and emit regular CF digits 1,3
+- its 2-term convergent should be 4/3
+- no hangs, no speculative broad rewrite
+
+Acceptance criteria:
+- add a minimal finite generalized-source red BB test first
+- drive it green
+- existing go test ./cf ./cfsource remains green
+- keep GCF.Next() regular; do not generalize RCFTerm or sink interfaces
+
+Single highest-priority design question:
+How should FromSource compose generalized (p,q) source terms into unary-LFT sink state so that every loop iteration makes real progress (emit, ingest one source term, or collapse on EOF) without hanging?

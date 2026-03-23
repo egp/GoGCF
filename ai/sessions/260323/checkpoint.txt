@@ -1,0 +1,23 @@
+Project: GoGCF, immutable/testable continued-fraction arithmetic in Gosper/HAKMEM style.
+Current milestone: remove the P==1 restriction cleanly by making generalized (p,q) ingestion work at the source adapter boundary.
+Working:
+- Core public API/types exist; binary Add/Sub/Mul/Div work on regular GCF sinks.
+- sqrt is materially hardened: exact cases, interval closure/pole behavior, repeated interval-prefix coverage through 5 digits, and Square(Sqrt(x)) composition reduction coverage.
+- Concrete GCFSources were split into companion package cfsource.
+- cfsource currently has Int64, Rat64, Sqrt2, and E().
+- Source-backed ranges now use optional CurrentRange() seam.
+- Shared RCF prefix helpers were extracted to cf/rcf_prefix_helpers.go.
+Current limitation / broken design:
+- FromSource still only accepts PQ terms with P==1.
+- A previous attempt to generalize FromSource caused hangs and was reverted.
+- Therefore generalized GCF sources (Lambert/Brouncker/etc.) are not yet usable through FromSource.
+Immediate next step:
+- Add a minimal finite generalized-source red test, then implement generalized (p,q) ingestion correctly in the source adapter.
+Acceptance target for that step:
+- finite generalized source with terms (1,1),(2,3) emits regular CF 1,3 and convergent 4/3
+- no hangs
+- existing cf/cfsource suites stay green
+Key design truth:
+- GCFSource stays generalized; GCF.Next() stays regular; FromSource is the only generalized->regular adapter.
+Highest-priority blocker:
+- correctly remove the P==1 restriction without changing GCF.Next() into a generalized sink.
