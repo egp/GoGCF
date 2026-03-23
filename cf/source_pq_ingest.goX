@@ -1,0 +1,22 @@
+// cf/source_pq_ingest.go v1
+package cf
+
+import "math/big"
+
+func (u unaryLFT) ingestPQ(p, q *big.Int) unaryLFT {
+	if p == nil || q == nil {
+		return u
+	}
+	if u.a == nil || u.b == nil || u.c == nil || u.d == nil {
+		return u
+	}
+
+	return unaryLFT{
+		a: addMul(u.a, q, u.b),
+		b: new(big.Int).Mul(new(big.Int).Set(u.a), new(big.Int).Set(p)),
+		c: addMul(u.c, q, u.d),
+		d: new(big.Int).Mul(new(big.Int).Set(u.c), new(big.Int).Set(p)),
+	}
+}
+
+// EOF cf/source_pq_ingest.go v1

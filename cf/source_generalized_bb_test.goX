@@ -1,0 +1,98 @@
+// cf/source_generalized_bb_test.go v1
+package cf_test
+
+import (
+	"math/big"
+	"testing"
+
+	"github.com/egp/GoGCF/cf"
+)
+
+type generalizedFiniteSource struct {
+	terms []cf.PQTerm
+	index int
+}
+
+func (s generalizedFiniteSource) NextPQ() (cf.PQTerm, cf.GCFSource, error) {
+	if s.index >= len(s.terms) {
+		return cf.PQTerm{Kind: cf.PQEOF}, s, nil
+	}
+	term := s.terms[s.index]
+	return term, generalizedFiniteSource{
+		terms: s.terms,
+		index: s.index + 1,
+	}, nil
+}
+
+func TestBB_FromSource_GeneralizedFiniteSource_WithPNotOne_Emits_1_3_ThenEOF(t *testing.T) {
+	src := generalizedFiniteSource{
+		terms: []cf.PQTerm{
+			{Kind: cf.PQValue, P: big1(), Q: big1()},
+			{Kind: cf.PQValue, P: big2(), Q: big3()},
+		},
+	}
+
+	g := cf.FromSource(src)
+
+	want := []string{"1", "3"}
+	cur := g
+	for i, w := range want {
+		term, rest, err := cur.Next()
+		if err != nil {
+			t.Fatalf("Next() #%d error: %v", i+1, err)
+		}
+		if !term.IsValue() {
+			t.Fatalf("term #%d should be a value", i+1)
+		}
+		value, ok := term.BigInt()
+		if !ok {
+			t.Fatalf("term #%d should expose a BigInt", i+1)
+		}
+		if got := value.String(); got != w {
+			t.Fatalf("term #%d = %s, want %s", i+1, got, w)
+		}
+		cur = rest
+	}
+
+	term3, _, err := cur.Next()
+	if err != nil {
+		t.Fatalf("final Next() error: %v", err)
+	}
+	if !term3.IsEOF() {
+		t.Fatalf("final term should be EOF")
+	}
+}
+
+func TestBB_FromSource_GeneralizedFiniteSource_WithPNotOne_TakeTwoConvergentIsFourOverThree(t *testing.T) {
+	src := generalizedFiniteSource{
+		terms: []cf.PQTerm{
+			{Kind: cf.PQValue, P: big1(), Q: big1()},
+			{Kind: cf.PQValue, P: big2(), Q: big3()},
+		},
+	}
+
+	g := cf.FromSource(src)
+
+	prefix, err := g.Take(2)
+	if err != nil {
+		t.Fatalf("Take(2) error: %v", err)
+	}
+
+	r, err := prefix.Convergent()
+	if err != nil {
+		t.Fatalf("Convergent() error: %v", err)
+	}
+
+	if got, want := r.Num.String(), "4"; got != want {
+		t.Fatalf("numerator = %s, want %s", got, want)
+	}
+	if got, want := r.Den.String(), "3"; got != want {
+		t.Fatalf("denominator = %s, want %s", got, want)
+	}
+}
+
+func big1() *big.Int { return big.NewInt(1) }
+func big2() *big.Int { return big.NewInt(2) }
+func big3() *big.Int { return big.NewInt(3) }
+
+// EOF cf/source_generalized_bb_test.go v1
