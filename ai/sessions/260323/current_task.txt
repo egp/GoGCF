@@ -1,5 +1,7 @@
 First task for the next chat:
 Remove the P==1 restriction correctly at the source adapter boundary.
+Only GCF may be ingested, only RCFTerm will be emitted.
+GCFSource can be constructed from a stream of RCFTerm
 
 Exact target:
 - generalized finite source with PQ terms (1,1), (2,3) should adapt through FromSource and emit regular CF digits 1,3
